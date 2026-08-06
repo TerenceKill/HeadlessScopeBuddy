@@ -1,0 +1,7 @@
+# ESP-IDF Partition Table
+# Name,   Type, SubType, Offset,  Size, Flags
+# Sized for a 4 MB ESP32 DevKit V1 module. No OTA slots or SPIFFS/LittleFS
+# partition are needed: the web UI is embedded directly into the app image.
+nvs,      data, nvs,     0x9000,  0x6000,
+phy_init, data, phy,     0xf000,  0x1000,
+factory,  app,  factory, 0x10000, 0x1F0000,

@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>HeadlessScopeBuddy</title>
+<style>
+  :root {
+    --bg: #07111C;
+    --card: #0D1927;
+    --border: #26384B;
+    --accent: #2684FF;
+    --accent-red: #EF4444;
+    --text: #F4FAFF;
+    --text-dim: #8FA5C2;
+    --value: #DCE8F7;
+    --green: #5DE08B;
+    --disabled: #607895;
+    --btn: #1455B8;
+    --btn-neutral: #26384B;
+    --icon-btn: #14263A;
+    --teal: #18B8C9;
+    --amber: #E6B43C;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  #app { max-width: 900px; margin: 0 auto; padding: 16px 16px 40px; }
+  .topbar {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .logo {
+    width: 34px; height: 34px; border-radius: 8px; background: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; color: #04101E; flex-shrink: 0;
+  }
+  .brand { font-size: 20px; font-weight: 700; color: var(--text); }
+  .screen-title { color: var(--accent); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+  .mode-name { color: var(--text-dim); font-size: 13px; margin-left: auto; text-align: right; }
+  .timer { color: var(--value); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .spacer { flex: 1; }
+  .icon-btn {
+    width: 44px; height: 40px; border-radius: 8px; background: var(--icon-btn);
+    border: 1px solid var(--accent); color: var(--text); display: flex; align-items: center;
+    justify-content: center; font-size: 18px; cursor: pointer; flex-shrink: 0;
+  }
+  .icon-btn:active { filter: brightness(1.2); }
+  button { font-family: inherit; }
+  .btn {
+    border: none; border-radius: 12px; background: var(--btn); color: var(--text);
+    padding: 14px 18px; font-size: 14px; font-weight: 600; cursor: pointer; text-align: center;
+    line-height: 1.3;
+  }
+  .btn:active { filter: brightness(1.15); }
+  .btn.neutral { background: var(--btn-neutral); }
+  .btn.outline { background: transparent; border: 2px solid var(--accent); color: var(--value); }
+  .btn.outline:disabled { border-color: #34465A; color: var(--disabled); cursor: default; }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px;
+  }
+  .hint { color: var(--accent); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 10px; }
+  .divider { height: 1px; background: var(--border); margin: 10px 0; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* start screen */
+  .lesson-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 18px; }
+  .lesson-card {
+    background: var(--card); border: 1px solid var(--accent); border-radius: 10px; padding: 18px;
+    display: flex; flex-direction: column; min-height: 230px;
+  }
+  .lesson-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .lesson-category { color: var(--value); font-size: 12px; margin-bottom: 10px; }
+  .lesson-summary { color: var(--text-dim); font-size: 13px; line-height: 1.5; flex: 1; }
+  .lesson-footer { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .channel-badge { font-size: 12px; color: var(--disabled); }
+  .channel-badge.two { color: var(--teal); }
+  .lesson-footer .btn { flex: 1; }
+  .pins-row { display: flex; gap: 24px; flex-wrap: wrap; margin: 6px 0 18px; font-size: 13px; }
+  .pins-row b { color: var(--accent); margin-right: 6px; }
+  .pager { display: flex; align-items: center; justify-content: center; gap: 16px; }
+  .pager span { color: var(--text-dim); font-size: 13px; min-width: 60px; text-align: center; }
+
+  /* settings */
+  .setting-row { display: flex; align-items: center; padding: 14px 4px; }
+  .setting-row + .setting-row { border-top: 1px solid var(--border); }
+  .setting-text { flex: 1; }
+  .setting-title { font-size: 14px; color: var(--value); }
+  .setting-desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .switch { position: relative; width: 52px; height: 30px; border-radius: 15px; background: var(--btn-neutral); flex-shrink: 0; cursor: pointer; }
+  .switch.on { background: var(--btn); }
+  .switch .knob { position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--text); transition: left .15s; }
+  .switch.on .knob { left: 25px; }
+  .nav-card {
+    display: flex; align-items: center; justify-content: space-between; padding: 16px 18px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; margin-top: 16px;
+  }
+  .nav-card span:first-child { color: var(--value); font-size: 14px; letter-spacing: .03em; }
+  .nav-card span:last-child { color: var(--accent); font-size: 18px; }
+
+  /* diagnostics */
+  .diag-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .kv-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; gap: 12px; }
+  .kv-row .k { color: var(--text-dim); }
+  .kv-row .v { color: var(--value); text-align: right; }
+
+  /* hardware tests */
+  .test-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .test-status { color: var(--disabled); font-size: 13px; margin: 16px 0; white-space: pre-line; }
+  .test-status.active { color: var(--green); }
+  .test-status.error { color: #E06B6B; }
+  .test-desc { color: #AFC2DC; font-size: 13px; white-space: pre-line; line-height: 1.6; }
+
+  /* reset / question setup */
+  .center-card { max-width: 640px; margin: 30px auto 0; text-align: left; }
+  .center-card h2 { margin: 0 0 16px; font-size: 20px; }
+  .center-card p { color: #AFC2DC; font-size: 14px; line-height: 1.7; white-space: pre-line; }
+  .center-actions { margin-top: 24px; display: flex; justify-content: flex-end; }
+
+  .question-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 700px) { .question-grid { grid-template-columns: 1fr; } }
+  .setup-line { font-size: 13px; line-height: 1.6; padding: 8px 0; border-top: 1px solid var(--border); }
+  .setup-line:first-of-type { border-top: none; }
+  .measurement-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; cursor: pointer; }
+  .measurement-row + .measurement-row { border-top: 1px solid var(--border); }
+  .m-box {
+    width: 26px; height: 26px; border: 2px solid var(--accent); border-radius: 5px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;
+  }
+  .m-box.checked { background: #1455B8; }
+  .m-source { width: 68px; font-size: 12px; flex-shrink: 0; }
+  .m-label { flex: 1; font-size: 13px; color: var(--value); }
+  .m-value { font-size: 13px; color: var(--disabled); text-align: right; min-width: 80px; }
+  .m-value.revealed { color: var(--green); }
+  .question-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 18px; }
+  @media (max-width: 700px) { .question-actions { grid-template-columns: 1fr; } }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(2,6,11,.8); display: flex; align-items: center;
+    justify-content: center; padding: 20px; z-index: 10;
+  }
+  .modal { background: var(--card); border: 2px solid var(--accent); border-radius: 12px; padding: 28px; max-width: 500px; }
+  .modal h3 { margin: 0 0 14px; }
+  .modal p { color: #AFC2DC; font-size: 14px; line-height: 1.6; }
+  .modal-actions { display: flex; gap: 14px; margin-top: 20px; }
+  .modal-actions .btn { flex: 1; }
+  .hidden { display: none !important; }
+  .offline-banner {
+    background: #3A1414; border: 1px solid #E06B6B; color: #F4C6C6; padding: 10px 14px;
+    border-radius: 8px; font-size: 13px; margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="logo">HSB</div>
+    <div>
+      <div class="brand">HeadlessScopeBuddy</div>
+      <div class="screen-title" id="screenTitle">START</div>
+    </div>
+    <div class="mode-name" id="modeName"></div>
+    <div class="timer hidden" id="timer">00:00</div>
+    <button class="icon-btn hidden" id="backBtn" title="Zurück">&#8592;</button>
+    <button class="icon-btn hidden" id="settingsBtn" title="Einstellungen">&#9881;</button>
+    <button class="icon-btn hidden" id="homeBtn" title="Start">&#8962;</button>
+  </div>
+
+  <div id="offlineBanner" class="offline-banner hidden">Verbindung zum HeadlessScopeBuddy verloren – erneuter Versuch…</div>
+
+  <!-- START -->
+  <section class="view" id="view-start">
+    <div class="lesson-grid" id="lessonGrid"></div>
+    <div class="pins-row">
+      <div><b>CH1</b>GPIO25</div>
+      <div><b>CH2</b>GPIO26</div>
+      <div><b>GND</b>gemeinsam</div>
+    </div>
+    <div class="pager">
+      <button class="icon-btn" id="pagePrev">&#8592;</button>
+      <span id="pageIndicator">1 / 1</span>
+      <button class="icon-btn" id="pageNext">&#8594;</button>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="view" id="view-settings">
+    <div class="card" id="settingsPanel"></div>
+    <div class="nav-card" id="openDiagnostics"><span>DIAGNOSE</span><span>&#8594;</span></div>
+  </section>
+
+  <!-- DIAGNOSTICS -->
+  <section class="view" id="view-diagnostics">
+    <div class="diag-grid">
+      <div class="card">
+        <div class="hint">Software &amp; Hardware</div>
+        <div id="diagSoftware"></div>
+      </div>
+      <div class="card">
+        <div class="hint">Laufzeit &amp; Speicher</div>
+        <div id="diagStatus"></div>
+      </div>
+    </div>
+    <div class="nav-card" id="openHwTests"><span>HARDWARETESTS</span><span>&#8594;</span></div>
+  </section>
+
+  <!-- HARDWARE TESTS -->
+  <section class="view" id="view-hwtests">
+    <div class="test-grid">
+      <div class="card">
+        <div class="hint">1-Kanal-Test</div>
+        <div class="test-desc">CH1 / GPIO25
+1 kHz, 50 % Tastgrad
+Pegel: ungefähr 0 bis 3,3 V
+Tastkopf gegen Board-GND anschließen.
+Nach dem Stoppen ist GPIO25 dauerhaft LOW.</div>
+        <div class="test-status" id="singleStatus">GESTOPPT</div>
+        <button class="btn" id="singleToggle" style="width:100%">TEST STARTEN</button>
+      </div>
+      <div class="card">
+        <div class="hint">2-Kanal-Test</div>
+        <div class="test-desc">CH1 / GPIO25: 1 kHz, 50 % Tastgrad
+CH2 / GPIO26: 1 kHz, 50 % Tastgrad
+Versatz CH1 zu CH2: 100 µs
+Beide Tastköpfe gegen denselben Board-GND anschließen.</div>
+        <div class="test-status" id="syncStatus">GESTOPPT</div>
+        <button class="btn" id="syncToggle" style="width:100%">TEST STARTEN</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESET / AUTO-VORBEREITUNG -->
+  <section class="view" id="view-reset">
+    <div class="card center-card">
+      <h2>AUTO-VORBEREITUNG</h2>
+      <p id="resetInstruction"></p>
+      <div class="center-actions">
+        <button class="btn" id="resetReady">ZUR MESSAUFGABE</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUESTION -->
+  <section class="view" id="view-question">
+    <div class="question-grid">
+      <div class="card">
+        <div class="hint">Messaufbau</div>
+        <div id="setupLines"></div>
+      </div>
+      <div class="card">
+        <div class="hint">Messwerte</div>
+        <div id="measurementRows"></div>
+      </div>
+    </div>
+    <div class="question-actions">
+      <button class="btn outline" id="revealAll">ALLE WERTE ANZEIGEN</button>
+      <button class="btn outline" id="revealSelected" disabled>AUSGEWÄHLTE WERTE ANZEIGEN</button>
+      <button class="btn" id="nextQuestion">NÄCHSTE MESSAUFGABE</button>
+    </div>
+  </section>
+</div>
+
+<div class="modal-overlay hidden" id="confirmOverlay">
+  <div class="modal">
+    <h3>Messreihe abbrechen?</h3>
+    <p>Möchtest du die laufende Messreihe wirklich abbrechen und zur Startseite zurückkehren?</p>
+    <div class="modal-actions">
+      <button class="btn neutral" id="confirmCancel">WEITERMACHEN</button>
+      <button class="btn" id="confirmHome">ZUR STARTSEITE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let lessons = [];
+let state = null;
+let offline = false;
+
+async function api(path, method, body) {
+  try {
+    const res = await fetch(path, {
+      method: method || 'GET',
+      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error('http ' + res.status);
+    setOffline(false);
+    return await res.json();
+  } catch (err) {
+    setOffline(true);
+    return null;
+  }
+}
+
+function setOffline(value) {
+  offline = value;
+  document.getElementById('offlineBanner').classList.toggle('hidden', !value);
+}
+
+function applyState(newState) {
+  if (!newState) return;
+  state = newState;
+  render();
+}
+
+async function refreshState() {
+  const newState = await api('/api/state');
+  if (newState) applyState(newState);
+}
+
+async function loadLessons() {
+  const data = await api('/api/lessons');
+  if (data) lessons = data.lessons;
+}
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function setView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+}
+
+function formatTimer(seconds) {
+  const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+  return m + ':' + s;
+}
+
+const screenTitles = {
+  start: 'START', reset: 'AUTO-VORBEREITUNG', question: '', settings: 'EINSTELLUNGEN',
+  diagnostics: 'DIAGNOSE', hwtests: 'HARDWARETESTS',
+};
+
+function render() {
+  if (!state) return;
+  setView(state.screen);
+
+  const titleEl = document.getElementById('screenTitle');
+  titleEl.textContent = state.screen === 'question' || state.screen === 'reset'
+    ? 'AUFGABE ' + state.question.number
+    : screenTitles[state.screen];
+
+  const modeEl = document.getElementById('modeName');
+  modeEl.textContent = (state.screen === 'question' || state.screen === 'reset') ? (state.question.mode_name || '') : '';
+
+  const timerEl = document.getElementById('timer');
+  const showTimer = state.settings.show_timer && state.screen === 'question';
+  timerEl.classList.toggle('hidden', !showTimer);
+  if (showTimer) timerEl.textContent = formatTimer(state.question.elapsed_seconds);
+
+  document.getElementById('settingsBtn').classList.toggle('hidden', state.screen !== 'start');
+  document.getElementById('homeBtn').classList.toggle('hidden',
+    !['question', 'reset', 'settings', 'diagnostics'].includes(state.screen));
+  document.getElementById('backBtn').classList.toggle('hidden', state.screen !== 'hwtests');
+
+  if (state.screen === 'start') renderStart();
+  else if (state.screen === 'settings') renderSettings();
+  else if (state.screen === 'diagnostics') renderDiagnostics();
+  else if (state.screen === 'hwtests') renderHwTests();
+  else if (state.screen === 'reset') renderReset();
+  else if (state.screen === 'question') renderQuestion();
+}
+
+function renderStart() {
+  const grid = document.getElementById('lessonGrid');
+  grid.innerHTML = '';
+  const perPage = state.start.lessons_per_page;
+  const first = state.start.page * perPage;
+  for (let i = first; i < first + perPage && i < lessons.length; ++i) {
+    const lesson = lessons[i];
+    const card = el('div', 'lesson-card');
+    card.appendChild(el('div', 'lesson-title', lesson.title));
+    card.appendChild(el('div', 'lesson-category', lesson.category));
+    card.appendChild(el('div', 'lesson-summary', lesson.summary));
+    const footer = el('div', 'lesson-footer');
+    footer.appendChild(el('div', 'channel-badge' + (lesson.required_channels === 2 ? ' two' : ''),
+      lesson.required_channels + ' CH'));
+    const startBtn = el('button', 'btn', 'STARTEN');
+    startBtn.onclick = async () => applyState(await api('/api/lesson/start', 'POST', { id: lesson.id }));
+    footer.appendChild(startBtn);
+    card.appendChild(footer);
+    grid.appendChild(card);
+  }
+  document.getElementById('pageIndicator').textContent =
+    (state.start.page + 1) + ' / ' + state.start.page_count;
+}
+
+function renderSettings() {
+  const panel = document.getElementById('settingsPanel');
+  panel.innerHTML = '';
+  const rows = [
+    ['show_timer', 'TIMER EINBLENDEN', 'Zeigt die verstrichene Zeit auf den Messaufgabenseiten.'],
+    ['reveal_values', 'WERTE DIREKT ANZEIGEN', 'Zeigt alle Lösungswerte sofort und entfernt die Lösungsbuttons.'],
+    ['auto_prep', 'AUTO-VORBEREITUNG', 'Gibt vor jeder Messaufgabe ein Referenzsignal für AUTO aus.'],
+    ['confirm_home', 'ABBRUCH BESTÄTIGEN', 'Fragt vor der Rückkehr aus einer laufenden Messreihe nach.'],
+  ];
+  rows.forEach(([key, title, desc]) => {
+    const row = el('div', 'setting-row');
+    const text = el('div', 'setting-text');
+    text.appendChild(el('div', 'setting-title', title));
+    text.appendChild(el('div', 'setting-desc', desc));
+    row.appendChild(text);
+    const sw = el('div', 'switch' + (state.settings[key] ? ' on' : ''));
+    sw.appendChild(el('div', 'knob'));
+    sw.onclick = async () => applyState(await api('/api/settings', 'POST', { key, value: !state.settings[key] }));
+    row.appendChild(sw);
+    panel.appendChild(row);
+  });
+}
+
+function renderDiagnostics() {
+  const d = state.diagnostics;
+  const software = document.getElementById('diagSoftware');
+  software.innerHTML = '';
+  [
+    ['Firmware', d.firmware_version], ['Build', d.build], ['ESP-IDF', d.idf_version],
+    ['Target', d.target], ['Ausgänge', d.hardware_ready ? 'bereit' : 'nicht bereit'],
+    ['CH1', 'GPIO25'], ['CH2', 'GPIO26'],
+  ].forEach(([k, v]) => {
+    const row = el('div', 'kv-row');
+    row.appendChild(el('div', 'k', k));
+    row.appendChild(el('div', 'v', String(v)));
+    software.appendChild(row);
+  });
+
+  const status = document.getElementById('diagStatus');
+  status.innerHTML = '';
+  [
+    ['Resetgrund', d.reset_reason], ['Laufzeit', d.uptime],
+    ['Heap-Minimum', d.min_heap_kb + ' KB'], ['Intern frei', d.free_heap_kb + ' KB'],
+    ['UI-Stackreserve', d.stack_reserve],
+  ].forEach(([k, v]) => {
+    const row = el('div', 'kv-row');
+    row.appendChild(el('div', 'k', k));
+    row.appendChild(el('div', 'v', String(v)));
+    status.appendChild(row);
+  });
+}
+
+function renderHwTests() {
+  const h = state.hwtests;
+  const singleStatus = document.getElementById('singleStatus');
+  singleStatus.textContent = h.single_error ? 'FEHLER - SERIELLEN LOG PRÜFEN' :
+    h.single_running ? 'AKTIV - GPIO25 MESSEN' : 'GESTOPPT';
+  singleStatus.className = 'test-status' + (h.single_error ? ' error' : h.single_running ? ' active' : '');
+  document.getElementById('singleToggle').textContent = h.single_running ? 'TEST STOPPEN' : 'TEST STARTEN';
+
+  const syncStatus = document.getElementById('syncStatus');
+  syncStatus.textContent = h.sync_error ? 'FEHLER - SERIELLEN LOG PRÜFEN' :
+    h.sync_running ? 'AKTIV - BEIDE KANÄLE MESSEN' : 'GESTOPPT';
+  syncStatus.className = 'test-status' + (h.sync_error ? ' error' : h.sync_running ? ' active' : '');
+  document.getElementById('syncToggle').textContent = h.sync_running ? 'TEST STOPPEN' : 'TEST STARTEN';
+}
+
+function renderReset() {
+  document.getElementById('resetInstruction').textContent = state.question.two_channel
+    ? 'Aktiviere CH1 und CH2 mit gleicher Skalierung, triggere auf CH1 und drücke dann AUTO am Oszilloskop.'
+    : 'Drücke jetzt den AUTO-Button am Oszilloskop, um die Ansicht für die Messung vorzubereiten.';
+}
+
+function renderQuestion() {
+  const q = state.question;
+  const setup = document.getElementById('setupLines');
+  setup.innerHTML = '';
+  [
+    [q.context, 'var(--text-dim)'],
+    [q.connection_hint, 'var(--teal)'],
+    [q.trigger_hint, 'var(--amber)'],
+  ].forEach(([text, color]) => {
+    const line = el('div', 'setup-line', text);
+    line.style.color = color;
+    setup.appendChild(line);
+  });
+
+  const rows = document.getElementById('measurementRows');
+  rows.innerHTML = '';
+  (q.measurements || []).forEach((m, index) => {
+    const row = el('div', 'measurement-row');
+    const box = el('div', 'm-box' + (m.selected ? ' checked' : ''), m.selected ? 'X' : '');
+    row.appendChild(box);
+    const source = el('div', 'm-source', m.source);
+    source.style.color = { CH1: '#2684FF', CH2: '#E6B43C', 'CH1/CH2': '#18B8C9', BERECHNET: '#9A70E5' }[m.source] || '#607895';
+    row.appendChild(source);
+    row.appendChild(el('div', 'm-label', m.label));
+    row.appendChild(el('div', 'm-value' + (m.revealed ? ' revealed' : ''), m.revealed ? m.value : '---'));
+    row.onclick = async () => applyState(await api('/api/measurement/toggle', 'POST', { index }));
+    rows.appendChild(row);
+  });
+
+  const revealAllBtn = document.getElementById('revealAll');
+  const revealSelectedBtn = document.getElementById('revealSelected');
+  const hideButtons = state.settings.reveal_values;
+  revealAllBtn.classList.toggle('hidden', hideButtons);
+  revealSelectedBtn.classList.toggle('hidden', hideButtons);
+  if (!hideButtons) {
+    revealAllBtn.textContent = q.all_visible ? 'ALLE WERTE VERBERGEN' : 'ALLE WERTE ANZEIGEN';
+    revealSelectedBtn.textContent = q.any_selected && q.all_selected_visible ?
+      'AUSGEWÄHLTE WERTE VERBERGEN' : 'AUSGEWÄHLTE WERTE ANZEIGEN';
+    revealSelectedBtn.disabled = !q.any_selected;
+  }
+}
+
+document.getElementById('settingsBtn').onclick = async () => applyState(await api('/api/nav', 'POST', { screen: 'settings' }));
+document.getElementById('backBtn').onclick = async () => applyState(await api('/api/nav', 'POST', { screen: 'diagnostics' }));
+document.getElementById('openDiagnostics').onclick = async () => applyState(await api('/api/nav', 'POST', { screen: 'diagnostics' }));
+document.getElementById('openHwTests').onclick = async () => applyState(await api('/api/nav', 'POST', { screen: 'hwtests' }));
+document.getElementById('pagePrev').onclick = async () => applyState(await api('/api/page', 'POST', { direction: -1 }));
+document.getElementById('pageNext').onclick = async () => applyState(await api('/api/page', 'POST', { direction: 1 }));
+document.getElementById('resetReady').onclick = async () => applyState(await api('/api/question/ready', 'POST', {}));
+document.getElementById('nextQuestion').onclick = async () => applyState(await api('/api/question/next', 'POST', {}));
+document.getElementById('revealAll').onclick = async () => applyState(await api('/api/measurement/reveal_all', 'POST', {}));
+document.getElementById('revealSelected').onclick = async () => applyState(await api('/api/measurement/reveal_selected', 'POST', {}));
+document.getElementById('singleToggle').onclick = async () =>
+  applyState(await api('/api/hwtest/single', 'POST', { enable: !state.hwtests.single_running }));
+document.getElementById('syncToggle').onclick = async () =>
+  applyState(await api('/api/hwtest/sync', 'POST', { enable: !state.hwtests.sync_running }));
+
+document.getElementById('homeBtn').onclick = () => {
+  if (state.settings.confirm_home && (state.screen === 'question' || state.screen === 'reset')) {
+    document.getElementById('confirmOverlay').classList.remove('hidden');
+  } else {
+    goHome();
+  }
+};
+async function goHome() { applyState(await api('/api/home', 'POST', {})); }
+document.getElementById('confirmCancel').onclick = () => document.getElementById('confirmOverlay').classList.add('hidden');
+document.getElementById('confirmHome').onclick = () => {
+  document.getElementById('confirmOverlay').classList.add('hidden');
+  goHome();
+};
+
+(async function start() {
+  await loadLessons();
+  await refreshState();
+  setInterval(refreshState, 1000);
+})();
+</script>
+</body>
+</html>

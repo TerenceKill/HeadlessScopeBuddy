@@ -1,0 +1,16 @@
+menu "HeadlessScopeBuddy Web UI"
+
+    config SCOPEBUDDY_WIFI_SSID
+        string "WLAN-SSID des Zugangspunkts"
+        default "HeadlessScopeBuddy"
+
+    config SCOPEBUDDY_WIFI_PASSWORD
+        string "WLAN-Passwort des Zugangspunkts (min. 8 Zeichen, leer = offen)"
+        default "scopebuddy"
+
+    config SCOPEBUDDY_WIFI_CHANNEL
+        int "WLAN-Kanal"
+        range 1 13
+        default 6
+
+endmenu
