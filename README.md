@@ -7,7 +7,7 @@ device has no display of its own: it opens a Wi-Fi access point and serves the
 entire user interface as a web page, browsable from any phone, tablet, or
 computer.
 
-![HeadlessScopeBuddy in its printed enclosure next to an oscilloscope displaying a generated square wave](docs/images/scopebuddy-oscilloscope-training.jpg)
+![HeadlessScopeBuddy on a breadboard next to an oscilloscope displaying a generated periodic signal, with the web UI open on a phone](docs/images/headlessscopebuddy-oscilloscope-training.png)
 
 Firmware 0.6.0 provides 15 single- and dual-channel lessons, operated entirely
 through the web UI.
