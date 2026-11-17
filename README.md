@@ -102,6 +102,7 @@ Dual-channel lessons on GPIO25 and GPIO26:
 - Quadrature encoder
 
 # Changes
+### v0.6.3
 ## Enhancements & ESP32-WROOM-32 Improvements
 
 This build includes several hardware compatibility fixes and usability extensions for standard **ESP32-WROOM-32** boards (such as ESP32 DevKit V1 and ESP32 D1 Mini):
