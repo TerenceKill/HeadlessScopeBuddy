@@ -40,7 +40,12 @@
   .screen-title { color: var(--accent); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
   .mode-name { color: var(--text-dim); font-size: 13px; margin-left: auto; text-align: right; }
   .timer { color: var(--value); font-size: 13px; font-variant-numeric: tabular-nums; }
-  .spacer { flex: 1; }
+  .lang-select {
+    height: 40px; padding: 0 10px; border-radius: 8px; background: var(--icon-btn);
+    border: 1px solid var(--border); color: var(--text); font-family: inherit;
+    font-size: 13px; font-weight: 600; cursor: pointer; outline: none;
+  }
+  .lang-select:focus { border-color: var(--accent); }
   .icon-btn {
     width: 44px; height: 40px; border-radius: 8px; background: var(--icon-btn);
     border: 1px solid var(--accent); color: var(--text); display: flex; align-items: center;
@@ -191,6 +196,10 @@
     </div>
     <div class="mode-name" id="modeName"></div>
     <div class="timer hidden" id="timer">00:00</div>
+    <select class="lang-select" id="langSelect" title="Sprache / Language">
+      <option value="de">DE</option>
+      <option value="en">EN</option>
+    </select>
     <button class="icon-btn hidden" id="backBtn" title="Zurück">&#8592;</button>
     <button class="icon-btn hidden" id="settingsBtn" title="Einstellungen">&#9881;</button>
     <button class="icon-btn hidden" id="homeBtn" title="Start">&#8962;</button>
@@ -198,13 +207,12 @@
 
   <div id="offlineBanner" class="offline-banner hidden">Verbindung zum HeadlessScopeBuddy verloren – erneuter Versuch…</div>
 
-  <!-- START -->
   <section class="view" id="view-start">
     <div class="lesson-grid" id="lessonGrid"></div>
     <div class="pins-row">
       <div><b>CH1</b>GPIO25</div>
       <div><b>CH2</b>GPIO26</div>
-      <div><b>GND</b>gemeinsam</div>
+      <div><b>GND</b><span id="pinGnd">gemeinsam</span></div>
     </div>
     <div class="pager">
       <button class="icon-btn" id="pagePrev">&#8592;</button>
@@ -213,22 +221,21 @@
     </div>
   </section>
 
-  <!-- SETTINGS -->
   <section class="view" id="view-settings">
     <div class="card" id="settingsPanel"></div>
 
     <div class="card wifi-card">
-      <div class="hint">WLAN-Verbindung (Client / WPA2 / DHCP)</div>
-      <div class="setting-desc">
+      <div class="hint" id="wifiTitle">WLAN-Verbindung (Client / WPA2 / DHCP)</div>
+      <div class="setting-desc" id="wifiDesc">
         Verbindet den HeadlessScopeBuddy beim Start automatisch mit einem bestehenden 2,4-GHz-WLAN (Kanalwahl automatisch). Bei Nichterreichbarkeit startet wieder der eigene Access Point „HeadlessScopeBuddy“.
       </div>
       <div class="wifi-fields">
         <div>
-          <label class="field-label" for="wifiSsid">WLAN-Name (SSID)</label>
+          <label class="field-label" id="wifiSsidLabel" for="wifiSsid">WLAN-Name (SSID)</label>
           <input class="text-input" id="wifiSsid" type="text" maxlength="32" placeholder="Heimnetzwerk">
         </div>
         <div>
-          <label class="field-label" for="wifiPass">WLAN-Passwort (WPA2)</label>
+          <label class="field-label" id="wifiPassLabel" for="wifiPass">WLAN-Passwort (WPA2)</label>
           <input class="text-input" id="wifiPass" type="password" maxlength="64" placeholder="Passwort">
         </div>
       </div>
@@ -239,30 +246,28 @@
       <div class="wifi-status" id="wifiStatus"></div>
     </div>
 
-    <div class="nav-card" id="openDiagnostics"><span>DIAGNOSE</span><span>&#8594;</span></div>
+    <div class="nav-card" id="openDiagnostics"><span id="diagNavText">DIAGNOSE</span><span>&#8594;</span></div>
   </section>
 
-  <!-- DIAGNOSTICS -->
   <section class="view" id="view-diagnostics">
     <div class="diag-grid">
       <div class="card">
-        <div class="hint">Software &amp; Hardware</div>
+        <div class="hint" id="diagSoftHint">Software &amp; Hardware</div>
         <div id="diagSoftware"></div>
       </div>
       <div class="card">
-        <div class="hint">Laufzeit &amp; Speicher</div>
+        <div class="hint" id="diagStatHint">Laufzeit &amp; Speicher</div>
         <div id="diagStatus"></div>
       </div>
     </div>
-    <div class="nav-card" id="openHwTests"><span>HARDWARETESTS</span><span>&#8594;</span></div>
+    <div class="nav-card" id="openHwTests"><span id="hwTestsNavText">HARDWARETESTS</span><span>&#8594;</span></div>
   </section>
 
-  <!-- HARDWARE TESTS -->
   <section class="view" id="view-hwtests">
     <div class="test-grid">
       <div class="card">
-        <div class="hint">1-Kanal-Test</div>
-        <div class="test-desc">CH1 / GPIO25
+        <div class="hint" id="test1Hint">1-Kanal-Test</div>
+        <div class="test-desc" id="test1Desc">CH1 / GPIO25
 1 kHz, 50 % Tastgrad
 Pegel: ungefähr 0 bis 3,3 V
 Tastkopf gegen Board-GND anschließen.
@@ -271,8 +276,8 @@ Nach dem Stoppen ist GPIO25 dauerhaft LOW.</div>
         <button class="btn" id="singleToggle" style="width:100%">TEST STARTEN</button>
       </div>
       <div class="card">
-        <div class="hint">2-Kanal-Test</div>
-        <div class="test-desc">CH1 / GPIO25: 1 kHz, 50 % Tastgrad
+        <div class="hint" id="test2Hint">2-Kanal-Test</div>
+        <div class="test-desc" id="test2Desc">CH1 / GPIO25: 1 kHz, 50 % Tastgrad
 CH2 / GPIO26: 1 kHz, 50 % Tastgrad
 Versatz CH1 zu CH2: 100 µs
 Beide Tastköpfe gegen denselben Board-GND anschließen.</div>
@@ -282,10 +287,9 @@ Beide Tastköpfe gegen denselben Board-GND anschließen.</div>
     </div>
   </section>
 
-  <!-- RESET / AUTO-VORBEREITUNG -->
   <section class="view" id="view-reset">
     <div class="card center-card">
-      <h2>AUTO-VORBEREITUNG</h2>
+      <h2 id="resetTitle">AUTO-VORBEREITUNG</h2>
       <p id="resetInstruction"></p>
       <div class="center-actions">
         <button class="btn" id="resetReady">ZUR MESSAUFGABE</button>
@@ -293,15 +297,14 @@ Beide Tastköpfe gegen denselben Board-GND anschließen.</div>
     </div>
   </section>
 
-  <!-- QUESTION -->
   <section class="view" id="view-question">
     <div class="question-grid">
       <div class="card">
-        <div class="hint">Messaufbau</div>
+        <div class="hint" id="setupHint">Messaufbau</div>
         <div id="setupLines"></div>
       </div>
       <div class="card">
-        <div class="hint">Messwerte</div>
+        <div class="hint" id="measHint">Messwerte</div>
         <div id="measurementRows"></div>
       </div>
     </div>
@@ -315,8 +318,8 @@ Beide Tastköpfe gegen denselben Board-GND anschließen.</div>
 
 <div class="modal-overlay hidden" id="confirmOverlay">
   <div class="modal">
-    <h3>Messreihe abbrechen?</h3>
-    <p>Möchtest du die laufende Messreihe wirklich abbrechen und zur Startseite zurückkehren?</p>
+    <h3 id="confirmTitle">Messreihe abbrechen?</h3>
+    <p id="confirmBody">Möchtest du die laufende Messreihe wirklich abbrechen und zur Startseite zurückkehren?</p>
     <div class="modal-actions">
       <button class="btn neutral" id="confirmCancel">WEITERMACHEN</button>
       <button class="btn" id="confirmHome">ZUR STARTSEITE</button>
@@ -325,23 +328,81 @@ Beide Tastköpfe gegen denselben Board-GND anschließen.</div>
 </div>
 
 <script>
-const lessonExamples = {
-  'PERIODISCHES SIGNAL': 'Prüfung eines Quarz-Taktgenerators auf einer Mikrocontroller-Platine oder der Schaltfrequenz eines DC/DC-Schaltreglers.',
-  'PULSBREITEN': 'Diagnose an einem PWM-gesteuerten PC-Lüfter, einer gedimmten LED oder einem Kfz-Magnetventil, um die reale Einschaltdauer zu prüfen.',
-  'BURST': 'Fehlersuche an einer Infrarot-Fernbedienung oder einem 433-MHz-Funksender, der Datenpakete mit festen Ruhepausen sendet.',
-  'PULSLÜCKE': 'Kfz-Motordiagnostik am Kurbelwellensensor (z. B. 60-2-Trigger-Rad), bei dem eine Zahnlücke den oberen Totpunkt markiert.',
-  'SERVOSIGNAL': 'Modellbau und Robotik – Prüfung, ob der Controller für 0° bis 180° tatsächlich 1,0 ms bis 2,0 ms Pulsbreite alle 20 ms ausgibt.',
-  'TACHOSIGNAL': 'Kontrolle eines Hall-Sensors an einem Elektromotor, einer Pumpe oder einem ABS-Raddrehzahlsensor zur Bestimmung der echten Drehzahl.',
-  'TASTERPRELLEN': 'Hardware- und Firmware-Entwicklung – Messung der mechanischen Prellzeit von Tastern oder Relais zur Dimensionierung der Entprellung.',
-  'UART 8N1': 'Inbetriebnahme einer seriellen Schnittstelle (GPS, RS-232/RS-485), um bei Zeichensalat die reale Baudrate über die Bitbreite zu prüfen.',
-  'ZUSTANDSWECHSEL': 'Analyse einer FSK-Modulation (Funkmeldeempfänger) oder eines Antriebs mit zwei Drehzahlstufen (Schleichgang und Eilgang).',
-  'TRIGGER-ANTWORT': 'Messung der Interrupt-Latenz eines Mikrocontrollers oder der Schaltverzögerung eines Optokopplers und Leistungstreibers.',
-  'PHASENVERSCHIEBUNG': 'Untersuchung von RC-/LC-Filtern, Audiostufen oder Mehrphasen-Schaltreglern durch Vergleich von Ein- und Ausgangssignal.',
-  'FREQUENZTEILER': 'Prüfung von Zähler- und Flip-Flop-ICs (z. B. 74HC4040 / CD4017) oder Prescalern auf sauberes Umschalten ohne Zählfehler.',
-  'ULTRASCHALL-ECHO': 'Fehlersuche an Ultraschall-Abstandssensoren (z. B. HC-SR04 in Robotik oder Einparkhilfen) über die Echo-Pulsbreite (58 µs/cm).',
-  'FREIGEGEBENE PWM': 'Diagnose an Motortreibern oder Schaltnetzteilen mit Enable-Pin, um die Anlaufverzögerung nach der Freigabe zu messen.',
-  'QUADRATURGEBER': 'Wartung an CNC-Maschinen, 3D-Druckern oder Drehgebern – Prüfung von 90°-Phasenversatz und führender Spur für die Drehrichtung.',
-};
+const supportedLangs = ['de', 'en'];
+const langCache = {};
+let currentLang = localStorage.getItem('hsb_lang') || 'de';
+if (!supportedLangs.includes(currentLang)) currentLang = 'de';
+let dict = {};
+
+async function loadLanguage(lang) {
+  if (!supportedLangs.includes(lang)) lang = 'de';
+  if (!langCache[lang]) {
+    try {
+      const res = await fetch('/lang/' + lang + '.json');
+      if (res.ok) langCache[lang] = await res.json();
+    } catch (e) {}
+  }
+  if (langCache[lang]) {
+    currentLang = lang;
+    dict = langCache[lang];
+    localStorage.setItem('hsb_lang', currentLang);
+  }
+}
+
+function t(key) {
+  return dict[key] !== undefined ? dict[key] : key;
+}
+
+function trC(text) {
+  if (!text || currentLang === 'de') return text;
+  if (dict.cText && dict.cText[text]) return dict.cText[text];
+  if (Array.isArray(dict.cPatterns)) {
+    for (const [pattern, rep] of dict.cPatterns) {
+      const rx = new RegExp(pattern);
+      if (rx.test(text)) return text.replace(rx, rep);
+    }
+  }
+  return text.replace(/U\/min/g, 'RPM').replace(/zu 1/g, 'to 1');
+}
+function setText(id, text) {
+  const node = document.getElementById(id);
+  if (node) node.textContent = text;
+}
+
+function applyStaticTranslations() {
+  document.documentElement.lang = currentLang;
+  setText('offlineBanner', t('offline'));
+  setText('pinGnd', t('pinGnd'));
+  setText('wifiTitle', t('wifiTitle'));
+  setText('wifiDesc', t('wifiDesc'));
+  setText('wifiSsidLabel', t('wifiSsidLabel'));
+  setText('wifiPassLabel', t('wifiPassLabel'));
+  setText('wifiSaveBtn', t('wifiSaveBtn'));
+  setText('wifiResetBtn', t('wifiResetBtn'));
+  setText('diagNavText', t('diagNav'));
+  setText('diagSoftHint', t('diagSoftHint'));
+  setText('diagStatHint', t('diagStatHint'));
+  setText('hwTestsNavText', t('hwTestsNav'));
+  setText('test1Hint', t('test1Hint'));
+  setText('test1Desc', t('test1Desc'));
+  setText('test2Hint', t('test2Hint'));
+  setText('test2Desc', t('test2Desc'));
+  setText('resetTitle', t('resetTitle'));
+  setText('resetReady', t('resetReady'));
+  setText('setupHint', t('setupHint'));
+  setText('measHint', t('measHint'));
+  setText('nextQuestion', t('nextQuestion'));
+  setText('confirmTitle', t('confirmTitle'));
+  setText('confirmBody', t('confirmBody'));
+  setText('confirmCancel', t('confirmCancel'));
+  setText('confirmHome', t('confirmHome'));
+
+  const ssidInput = document.getElementById('wifiSsid');
+  if (ssidInput) ssidInput.placeholder = t('wifiSsidPlaceholder');
+  const passInput = document.getElementById('wifiPass');
+  if (passInput) passInput.placeholder = t('wifiPassPlaceholder');
+}
+
 let lessons = [];
 let state = null;
 let offline = false;
@@ -410,22 +471,20 @@ function formatTimer(seconds) {
   return m + ':' + s;
 }
 
-const screenTitles = {
-  start: 'START', reset: 'AUTO-VORBEREITUNG', question: '', settings: 'EINSTELLUNGEN',
-  diagnostics: 'DIAGNOSE', hwtests: 'HARDWARETESTS',
-};
-
 function render() {
   if (!state) return;
+  applyStaticTranslations();
   setView(state.screen);
 
   const titleEl = document.getElementById('screenTitle');
   titleEl.textContent = state.screen === 'question' || state.screen === 'reset'
-    ? 'AUFGABE ' + state.question.number
-    : screenTitles[state.screen];
+    ? t('task') + ' ' + state.question.number
+    : t('screen_' + state.screen);
 
   const modeEl = document.getElementById('modeName');
-  modeEl.textContent = (state.screen === 'question' || state.screen === 'reset') ? (state.question.mode_name || '') : '';
+  modeEl.textContent = (state.screen === 'question' || state.screen === 'reset')
+    ? trC(state.question.mode_name || '')
+    : '';
 
   const timerEl = document.getElementById('timer');
   const showTimer = state.settings.show_timer && state.screen === 'question';
@@ -455,15 +514,15 @@ function renderStart() {
   for (let i = first; i < first + perPage && i < lessons.length; ++i) {
     const lesson = lessons[i];
     const card = el('div', 'lesson-card');
-    card.appendChild(el('div', 'lesson-title', lesson.title));
-    card.appendChild(el('div', 'lesson-category', lesson.category));
-    card.appendChild(el('div', 'lesson-summary', lesson.summary));
+    card.appendChild(el('div', 'lesson-title', trC(lesson.title)));
+    card.appendChild(el('div', 'lesson-category', trC(lesson.category)));
+    card.appendChild(el('div', 'lesson-summary', trC(lesson.summary)));
 
-    const exampleText = lessonExamples[lesson.title];
+    const exampleText = dict.examples && dict.examples[lesson.title];
     if (exampleText) {
       const isOpen = expandedExamples.has(lesson.id);
       const toggleBtn = el('button', 'lesson-example-toggle',
-        isOpen ? 'Praxisbeispiel ausblenden \u25B4' : 'Praxisbeispiel anzeigen \u25BE');
+        isOpen ? t('exampleHide') : t('exampleShow'));
       toggleBtn.type = 'button';
       toggleBtn.onclick = () => {
         if (expandedExamples.has(lesson.id)) expandedExamples.delete(lesson.id);
@@ -479,7 +538,7 @@ function renderStart() {
     const footer = el('div', 'lesson-footer');
     footer.appendChild(el('div', 'channel-badge' + (lesson.required_channels === 2 ? ' two' : ''),
       lesson.required_channels + ' CH'));
-    const startBtn = el('button', 'btn', 'STARTEN');
+    const startBtn = el('button', 'btn', t('startBtn'));
     startBtn.onclick = async () => applyState(await api('/api/lesson/start', 'POST', { id: lesson.id }));
     footer.appendChild(startBtn);
     card.appendChild(footer);
@@ -496,10 +555,10 @@ function renderSettings() {
   const panel = document.getElementById('settingsPanel');
   panel.innerHTML = '';
   const rows = [
-    ['show_timer', 'TIMER EINBLENDEN', 'Zeigt die verstrichene Zeit auf den Messaufgabenseiten.'],
-    ['reveal_values', 'WERTE DIREKT ANZEIGEN', 'Zeigt alle Lösungswerte sofort und entfernt die Lösungsbuttons.'],
-    ['auto_prep', 'AUTO-VORBEREITUNG', 'Gibt vor jeder Messaufgabe ein Referenzsignal für AUTO aus.'],
-    ['confirm_home', 'ABBRUCH BESTÄTIGEN', 'Fragt vor der Rückkehr aus einer laufenden Messreihe nach.'],
+    ['show_timer', t('setTimerTitle'), t('setTimerDesc')],
+    ['reveal_values', t('setRevealTitle'), t('setRevealDesc')],
+    ['auto_prep', t('setAutoTitle'), t('setAutoDesc')],
+    ['confirm_home', t('setConfirmTitle'), t('setConfirmDesc')],
   ];
   rows.forEach(([key, title, desc]) => {
     const row = el('div', 'setting-row');
@@ -520,8 +579,8 @@ function renderDiagnostics() {
   const software = document.getElementById('diagSoftware');
   software.innerHTML = '';
   [
-    ['Firmware', d.firmware_version], ['Build', d.build], ['ESP-IDF', d.idf_version],
-    ['Target', d.target], ['Ausgänge', d.hardware_ready ? 'bereit' : 'nicht bereit'],
+    [t('diagFirmware'), d.firmware_version], [t('diagBuild'), d.build], [t('diagIdf'), d.idf_version],
+    [t('diagTarget'), d.target], [t('diagOutputs'), d.hardware_ready ? t('diagReady') : t('diagNotReady')],
     ['CH1', 'GPIO25'], ['CH2', 'GPIO26'],
   ].forEach(([k, v]) => {
     const row = el('div', 'kv-row');
@@ -533,9 +592,9 @@ function renderDiagnostics() {
   const status = document.getElementById('diagStatus');
   status.innerHTML = '';
   [
-    ['Resetgrund', d.reset_reason], ['Laufzeit', d.uptime],
-    ['Heap-Minimum', d.min_heap_kb + ' KB'], ['Intern frei', d.free_heap_kb + ' KB'],
-    ['UI-Stackreserve', d.stack_reserve],
+    [t('diagReset'), d.reset_reason], [t('diagUptime'), d.uptime],
+    [t('diagMinHeap'), d.min_heap_kb + ' KB'], [t('diagFreeHeap'), d.free_heap_kb + ' KB'],
+    [t('diagStack'), d.stack_reserve],
   ].forEach(([k, v]) => {
     const row = el('div', 'kv-row');
     row.appendChild(el('div', 'k', k));
@@ -547,34 +606,34 @@ function renderDiagnostics() {
 function renderHwTests() {
   const h = state.hwtests;
   const singleStatus = document.getElementById('singleStatus');
-  singleStatus.textContent = h.single_error ? 'FEHLER - SERIELLEN LOG PRÜFEN' :
-    h.single_running ? 'AKTIV - GPIO25 MESSEN' : 'GESTOPPT';
+  singleStatus.textContent = h.single_error ? t('testErr') :
+    h.single_running ? t('test1Active') : t('testStopped');
   singleStatus.className = 'test-status' + (h.single_error ? ' error' : h.single_running ? ' active' : '');
-  document.getElementById('singleToggle').textContent = h.single_running ? 'TEST STOPPEN' : 'TEST STARTEN';
+  document.getElementById('singleToggle').textContent = h.single_running ? t('testStop') : t('testStart');
 
   const syncStatus = document.getElementById('syncStatus');
-  syncStatus.textContent = h.sync_error ? 'FEHLER - SERIELLEN LOG PRÜFEN' :
-    h.sync_running ? 'AKTIV - BEIDE KANÄLE MESSEN' : 'GESTOPPT';
+  syncStatus.textContent = h.sync_error ? t('testErr') :
+    h.sync_running ? t('test2Active') : t('testStopped');
   syncStatus.className = 'test-status' + (h.sync_error ? ' error' : h.sync_running ? ' active' : '');
-  document.getElementById('syncToggle').textContent = h.sync_running ? 'TEST STOPPEN' : 'TEST STARTEN';
+  document.getElementById('syncToggle').textContent = h.sync_running ? t('testStop') : t('testStart');
 }
 
 function renderReset() {
   document.getElementById('resetInstruction').textContent = state.question.two_channel
-    ? 'Aktiviere CH1 und CH2 mit gleicher Skalierung, triggere auf CH1 und drücke dann AUTO am Oszilloskop.'
-    : 'Drücke jetzt den AUTO-Button am Oszilloskop, um die Ansicht für die Messung vorzubereiten.';
+    ? t('reset2Ch')
+    : t('reset1Ch');
 }
 
 function renderQuestion() {
   const q = state.question;
   const setup = document.getElementById('setupLines');
   setup.innerHTML = '';
-  const exampleText = lessonExamples[q.mode_name];
+  const exampleText = dict.examples && dict.examples[q.mode_name];
   [
-    [q.context, 'var(--text-dim)'],
+    [trC(q.context), 'var(--text-dim)'],
     [exampleText, 'var(--green)'],
-    [q.connection_hint, 'var(--teal)'],
-    [q.trigger_hint, 'var(--amber)'],
+    [trC(q.connection_hint), 'var(--teal)'],
+    [trC(q.trigger_hint), 'var(--amber)'],
   ].forEach(([text, color]) => {
     if (!text) return;
     const line = el('div', 'setup-line', text);
@@ -588,11 +647,11 @@ function renderQuestion() {
     const row = el('div', 'measurement-row');
     const box = el('div', 'm-box' + (m.selected ? ' checked' : ''), m.selected ? 'X' : '');
     row.appendChild(box);
-    const source = el('div', 'm-source', m.source);
+    const source = el('div', 'm-source', trC(m.source));
     source.style.color = { CH1: '#2684FF', CH2: '#E6B43C', 'CH1/CH2': '#18B8C9', BERECHNET: '#9A70E5' }[m.source] || '#607895';
     row.appendChild(source);
-    row.appendChild(el('div', 'm-label', m.label));
-    row.appendChild(el('div', 'm-value' + (m.revealed ? ' revealed' : ''), m.revealed ? m.value : '---'));
+    row.appendChild(el('div', 'm-label', trC(m.label)));
+    row.appendChild(el('div', 'm-value' + (m.revealed ? ' revealed' : ''), m.revealed ? trC(m.value) : '---'));
     row.onclick = async () => applyState(await api('/api/measurement/toggle', 'POST', { index }));
     rows.appendChild(row);
   });
@@ -603,9 +662,9 @@ function renderQuestion() {
   revealAllBtn.classList.toggle('hidden', hideButtons);
   revealSelectedBtn.classList.toggle('hidden', hideButtons);
   if (!hideButtons) {
-    revealAllBtn.textContent = q.all_visible ? 'ALLE WERTE VERBERGEN' : 'ALLE WERTE ANZEIGEN';
+    revealAllBtn.textContent = q.all_visible ? t('hideAll') : t('revealAll');
     revealSelectedBtn.textContent = q.any_selected && q.all_selected_visible ?
-      'AUSGEWÄHLTE WERTE VERBERGEN' : 'AUSGEWÄHLTE WERTE ANZEIGEN';
+      t('hideSel') : t('revealSel');
     revealSelectedBtn.disabled = !q.any_selected;
   }
 }
@@ -613,7 +672,7 @@ function renderQuestion() {
 async function submitWifiConfig(ssid, password) {
   const statusEl = document.getElementById('wifiStatus');
   statusEl.className = 'wifi-status';
-  statusEl.textContent = 'Speichere WLAN-Einstellungen…';
+  statusEl.textContent = t('wifiSaving');
   try {
     const res = await fetch('/api/wifi', {
       method: 'POST',
@@ -623,17 +682,24 @@ async function submitWifiConfig(ssid, password) {
     if (res.ok) {
       statusEl.className = 'wifi-status ok';
       statusEl.textContent = ssid
-        ? 'Gespeichert! ESP32 startet neu und verbindet sich mit „' + ssid + '“…'
-        : 'Zurückgesetzt! ESP32 startet neu im Access-Point-Modus…';
+        ? t('wifiSavedSta').replace('{ssid}', ssid)
+        : t('wifiSavedAp');
     } else {
       statusEl.className = 'wifi-status err';
-      statusEl.textContent = 'Fehler beim Speichern (bitte Eingaben prüfen).';
+      statusEl.textContent = t('wifiSaveErr');
     }
   } catch (err) {
     statusEl.className = 'wifi-status ok';
-    statusEl.textContent = 'Neustart ausgelöst…';
+    statusEl.textContent = t('wifiRebooting');
   }
 }
+
+const langSelect = document.getElementById('langSelect');
+langSelect.value = currentLang;
+langSelect.onchange = async () => {
+  await loadLanguage(langSelect.value);
+  render();
+};
 
 document.getElementById('wifiSaveBtn').onclick = () => {
   const ssid = document.getElementById('wifiSsid').value.trim();
@@ -641,7 +707,7 @@ document.getElementById('wifiSaveBtn').onclick = () => {
   if (!ssid) {
     const statusEl = document.getElementById('wifiStatus');
     statusEl.className = 'wifi-status err';
-    statusEl.textContent = 'Bitte einen WLAN-Namen (SSID) eingeben.';
+    statusEl.textContent = t('wifiSsidReq');
     return;
   }
   submitWifiConfig(ssid, password);
@@ -683,6 +749,8 @@ document.getElementById('confirmHome').onclick = () => {
 };
 
 (async function start() {
+  await loadLanguage(currentLang);
+  applyStaticTranslations();
   await loadLessons();
   await refreshState();
   setInterval(refreshState, 1000);
