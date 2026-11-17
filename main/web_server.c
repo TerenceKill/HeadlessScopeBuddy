@@ -12,6 +12,10 @@
 
 extern const uint8_t web_index_html_start[] asm("_binary_index_html_start");
 extern const uint8_t web_index_html_end[] asm("_binary_index_html_end");
+extern const uint8_t lang_de_start[] asm("_binary_de_json_start");
+extern const uint8_t lang_de_end[]   asm("_binary_de_json_end");
+extern const uint8_t lang_en_start[] asm("_binary_en_json_start");
+extern const uint8_t lang_en_end[]   asm("_binary_en_json_end");
 
 /* Funktionen aus main.c zum Lesen/Speichern der WLAN-Daten im NVS */
 extern esp_err_t wifi_save_credentials_and_restart(const char *ssid, const char *password);
@@ -54,6 +58,15 @@ static esp_err_t index_handler(httpd_req_t *req)
     httpd_resp_set_type(req, "text/html");
     return httpd_resp_send(req, (const char *)web_index_html_start,
                             web_index_html_end - web_index_html_start);
+}
+
+static esp_err_t lang_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "application/json; charset=utf-8");
+    if (strcmp(req->uri, "/lang/en.json") == 0) {
+        return httpd_resp_send(req, (const char *)lang_en_start, lang_en_end - lang_en_start);
+    }
+    return httpd_resp_send(req, (const char *)lang_de_start, lang_de_end - lang_de_start);
 }
 
 static esp_err_t lessons_handler(httpd_req_t *req)
@@ -240,6 +253,7 @@ static const httpd_uri_t routes[] = {
     { .uri = "/api/hwtest/sync", .method = HTTP_POST, .handler = hwtest_sync_handler },
     { .uri = "/api/wifi", .method = HTTP_GET, .handler = wifi_get_handler },
     { .uri = "/api/wifi", .method = HTTP_POST, .handler = wifi_post_handler },
+	{ .uri = "/lang/*", .method = HTTP_GET, .handler = lang_handler },
 };
 
 esp_err_t web_server_start(void)
