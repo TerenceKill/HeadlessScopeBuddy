@@ -10,5 +10,5 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 # remain under peripheral/ for the original ESP32-P4 CrowPanel build but are
 # intentionally not registered here so they are not compiled or required.
 set(EXTRA_COMPONENT_DIRS "${CMAKE_SOURCE_DIR}/peripheral/bsp_extra")
-set(PROJECT_VER "0.6.0")
+set(PROJECT_VER "0.6.3")
 project(HeadlessScopeBuddy)
