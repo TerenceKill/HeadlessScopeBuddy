@@ -13,6 +13,10 @@
 extern const uint8_t web_index_html_start[] asm("_binary_index_html_start");
 extern const uint8_t web_index_html_end[] asm("_binary_index_html_end");
 
+/* Funktionen aus main.c zum Lesen/Speichern der WLAN-Daten im NVS */
+extern esp_err_t wifi_save_credentials_and_restart(const char *ssid, const char *password);
+extern void wifi_get_configured_ssid(char *out_ssid, size_t max_len);
+
 static esp_err_t send_json(httpd_req_t *req, cJSON *root)
 {
     char *text = cJSON_PrintUnformatted(root);
@@ -184,6 +188,40 @@ static esp_err_t hwtest_sync_handler(httpd_req_t *req)
     return send_state(req);
 }
 
+static esp_err_t wifi_get_handler(httpd_req_t *req)
+{
+    char ssid[33] = {0};
+    wifi_get_configured_ssid(ssid, sizeof(ssid));
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "ssid", ssid);
+    return send_json(req, root);
+}
+
+static esp_err_t wifi_post_handler(httpd_req_t *req)
+{
+    cJSON *body = NULL;
+    if (read_body_json(req, &body) != ESP_OK || body == NULL) {
+        if (body) cJSON_Delete(body);
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid json");
+    }
+
+    const char *ssid = json_string(body, "ssid", "");
+    const char *password = json_string(body, "password", "");
+
+    cJSON *resp = cJSON_CreateObject();
+    cJSON_AddBoolToObject(resp, "ok", true);
+    esp_err_t send_err = send_json(req, resp);
+
+    /* Speichert Daten im NVS (leere SSID setzt auf AP-Modus zurück) und startet neu */
+    esp_err_t save_err = wifi_save_credentials_and_restart(ssid, password);
+    cJSON_Delete(body);
+
+    if (save_err != ESP_OK) {
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "saving wifi failed");
+    }
+    return send_err;
+}
+
 static const httpd_uri_t routes[] = {
     { .uri = "/", .method = HTTP_GET, .handler = index_handler },
     { .uri = "/api/lessons", .method = HTTP_GET, .handler = lessons_handler },
@@ -200,6 +238,8 @@ static const httpd_uri_t routes[] = {
     { .uri = "/api/settings", .method = HTTP_POST, .handler = settings_handler },
     { .uri = "/api/hwtest/single", .method = HTTP_POST, .handler = hwtest_single_handler },
     { .uri = "/api/hwtest/sync", .method = HTTP_POST, .handler = hwtest_sync_handler },
+    { .uri = "/api/wifi", .method = HTTP_GET, .handler = wifi_get_handler },
+    { .uri = "/api/wifi", .method = HTTP_POST, .handler = wifi_post_handler },
 };
 
 esp_err_t web_server_start(void)
