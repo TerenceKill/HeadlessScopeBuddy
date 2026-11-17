@@ -75,7 +75,17 @@
   .lesson-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
   .lesson-category { color: var(--value); font-size: 12px; margin-bottom: 10px; }
   .lesson-summary { color: var(--text-dim); font-size: 13px; line-height: 1.5; flex: 1; }
-  .lesson-footer { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .lesson-example-toggle {
+    background: none; border: none; color: var(--teal); font-size: 12px; padding: 8px 0 2px;
+    text-align: left; cursor: pointer; font-weight: 600;
+  }
+  .lesson-example-toggle:hover { text-decoration: underline; }
+  .lesson-example-box {
+    margin-top: 8px; padding: 10px 12px; border-radius: 8px;
+    background: rgba(24, 184, 201, 0.08); border: 1px solid rgba(24, 184, 201, 0.28);
+    color: var(--value); font-size: 12px; line-height: 1.5;
+  }
+  .lesson-footer { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
   .channel-badge { font-size: 12px; color: var(--disabled); }
   .channel-badge.two { color: var(--teal); }
   .lesson-footer .btn { flex: 1; }
@@ -315,10 +325,28 @@ Beide Tastköpfe gegen denselben Board-GND anschließen.</div>
 </div>
 
 <script>
+const lessonExamples = {
+  'PERIODISCHES SIGNAL': 'Prüfung eines Quarz-Taktgenerators auf einer Mikrocontroller-Platine oder der Schaltfrequenz eines DC/DC-Schaltreglers.',
+  'PULSBREITEN': 'Diagnose an einem PWM-gesteuerten PC-Lüfter, einer gedimmten LED oder einem Kfz-Magnetventil, um die reale Einschaltdauer zu prüfen.',
+  'BURST': 'Fehlersuche an einer Infrarot-Fernbedienung oder einem 433-MHz-Funksender, der Datenpakete mit festen Ruhepausen sendet.',
+  'PULSLÜCKE': 'Kfz-Motordiagnostik am Kurbelwellensensor (z. B. 60-2-Trigger-Rad), bei dem eine Zahnlücke den oberen Totpunkt markiert.',
+  'SERVOSIGNAL': 'Modellbau und Robotik – Prüfung, ob der Controller für 0° bis 180° tatsächlich 1,0 ms bis 2,0 ms Pulsbreite alle 20 ms ausgibt.',
+  'TACHOSIGNAL': 'Kontrolle eines Hall-Sensors an einem Elektromotor, einer Pumpe oder einem ABS-Raddrehzahlsensor zur Bestimmung der echten Drehzahl.',
+  'TASTERPRELLEN': 'Hardware- und Firmware-Entwicklung – Messung der mechanischen Prellzeit von Tastern oder Relais zur Dimensionierung der Entprellung.',
+  'UART 8N1': 'Inbetriebnahme einer seriellen Schnittstelle (GPS, RS-232/RS-485), um bei Zeichensalat die reale Baudrate über die Bitbreite zu prüfen.',
+  'ZUSTANDSWECHSEL': 'Analyse einer FSK-Modulation (Funkmeldeempfänger) oder eines Antriebs mit zwei Drehzahlstufen (Schleichgang und Eilgang).',
+  'TRIGGER-ANTWORT': 'Messung der Interrupt-Latenz eines Mikrocontrollers oder der Schaltverzögerung eines Optokopplers und Leistungstreibers.',
+  'PHASENVERSCHIEBUNG': 'Untersuchung von RC-/LC-Filtern, Audiostufen oder Mehrphasen-Schaltreglern durch Vergleich von Ein- und Ausgangssignal.',
+  'FREQUENZTEILER': 'Prüfung von Zähler- und Flip-Flop-ICs (z. B. 74HC4040 / CD4017) oder Prescalern auf sauberes Umschalten ohne Zählfehler.',
+  'ULTRASCHALL-ECHO': 'Fehlersuche an Ultraschall-Abstandssensoren (z. B. HC-SR04 in Robotik oder Einparkhilfen) über die Echo-Pulsbreite (58 µs/cm).',
+  'FREIGEGEBENE PWM': 'Diagnose an Motortreibern oder Schaltnetzteilen mit Enable-Pin, um die Anlaufverzögerung nach der Freigabe zu messen.',
+  'QUADRATURGEBER': 'Wartung an CNC-Maschinen, 3D-Druckern oder Drehgebern – Prüfung von 90°-Phasenversatz und führender Spur für die Drehrichtung.',
+};
 let lessons = [];
 let state = null;
 let offline = false;
 let wifiLoaded = false;
+const expandedExamples = new Set();
 
 async function api(path, method, body) {
   try {
@@ -430,6 +458,24 @@ function renderStart() {
     card.appendChild(el('div', 'lesson-title', lesson.title));
     card.appendChild(el('div', 'lesson-category', lesson.category));
     card.appendChild(el('div', 'lesson-summary', lesson.summary));
+
+    const exampleText = lessonExamples[lesson.title];
+    if (exampleText) {
+      const isOpen = expandedExamples.has(lesson.id);
+      const toggleBtn = el('button', 'lesson-example-toggle',
+        isOpen ? 'Praxisbeispiel ausblenden \u25B4' : 'Praxisbeispiel anzeigen \u25BE');
+      toggleBtn.type = 'button';
+      toggleBtn.onclick = () => {
+        if (expandedExamples.has(lesson.id)) expandedExamples.delete(lesson.id);
+        else expandedExamples.add(lesson.id);
+        renderStart();
+      };
+      card.appendChild(toggleBtn);
+      if (isOpen) {
+        card.appendChild(el('div', 'lesson-example-box', exampleText));
+      }
+    }
+
     const footer = el('div', 'lesson-footer');
     footer.appendChild(el('div', 'channel-badge' + (lesson.required_channels === 2 ? ' two' : ''),
       lesson.required_channels + ' CH'));
@@ -442,7 +488,6 @@ function renderStart() {
   document.getElementById('pageIndicator').textContent =
     (state.start.page + 1) + ' / ' + state.start.page_count;
 }
-
 function renderSettings() {
   if (!wifiLoaded) {
     wifiLoaded = true;
@@ -524,11 +569,14 @@ function renderQuestion() {
   const q = state.question;
   const setup = document.getElementById('setupLines');
   setup.innerHTML = '';
+  const exampleText = lessonExamples[q.mode_name];
   [
     [q.context, 'var(--text-dim)'],
+    [exampleText, 'var(--green)'],
     [q.connection_hint, 'var(--teal)'],
     [q.trigger_hint, 'var(--amber)'],
   ].forEach(([text, color]) => {
+    if (!text) return;
     const line = el('div', 'setup-line', text);
     line.style.color = color;
     setup.appendChild(line);
@@ -576,7 +624,7 @@ async function submitWifiConfig(ssid, password) {
       statusEl.className = 'wifi-status ok';
       statusEl.textContent = ssid
         ? 'Gespeichert! ESP32 startet neu und verbindet sich mit „' + ssid + '“…'
-        : 'Zurückgesetzt! ESP32 startet neu im Access-Point-Modus…\n\nDanach erreichbar unter http://192.168.4.1';
+        : 'Zurückgesetzt! ESP32 startet neu im Access-Point-Modus…';
     } else {
       statusEl.className = 'wifi-status err';
       statusEl.textContent = 'Fehler beim Speichern (bitte Eingaben prüfen).';
