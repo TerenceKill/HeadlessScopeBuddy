@@ -1214,7 +1214,7 @@ static void single_test_toggle_event(lv_event_t *event)
     log_operation_error(starting ? "Starting one-channel test" :
                                    "Stopping one-channel test", err);
     update_hardware_test_control(single_test_status_label, single_test_action_label,
-                                 single_test_running, "AKTIV - GPIO48 MESSEN", err);
+                                 single_test_running, "AKTIV - GPIO25 MESSEN", err);
 }
 
 static void sync_test_toggle_event(lv_event_t *event)
@@ -1410,11 +1410,11 @@ static void build_start_screen(void)
     }
     make_label(ui_Screen1, "CH1", 25, 438,
                &lv_font_montserrat_14, 0x2684FF);
-    make_label(ui_Screen1, "GPIO48", 62, 438,
+    make_label(ui_Screen1, "GPIO25", 62, 438,
                &lv_font_montserrat_14, 0xDCE8F7);
     make_label(ui_Screen1, "CH2", 145, 438,
                &lv_font_montserrat_14, 0x2684FF);
-    make_label(ui_Screen1, "GPIO47", 182, 438,
+    make_label(ui_Screen1, "GPIO26", 182, 438,
                &lv_font_montserrat_14, 0xDCE8F7);
     make_label(ui_Screen1, "GND", 265, 438,
                &lv_font_montserrat_14, 0x2684FF);
@@ -1595,7 +1595,7 @@ static void build_diagnostics_screen(void)
     lv_obj_set_style_text_line_space(software_keys, 4, 0);
     char software_text[256];
     snprintf(software_text, sizeof(software_text),
-             "%s\n%s %s\n%s\n%s\n%s\nGPIO48\nGPIO47\nGPIO%d\nGPIO%d\nGPIO%d\n3V3\nGND",
+             "%s\n%s %s\n%s\n%s\n%s\nGPIO25\nGPIO26\nGPIO%d\nGPIO%d\nGPIO%d\n3V3\nGND",
              SCOPEBUDDY_FIRMWARE_VERSION, app->date, app->time, app->idf_ver,
              CONFIG_IDF_TARGET, hardware_ready ? "bereit" : "nicht bereit",
              ENCODER_GPIO_CLK, ENCODER_GPIO_DT, ENCODER_GPIO_SW);
@@ -1687,16 +1687,16 @@ static void build_hardware_tests_screen(void)
     lv_obj_set_style_text_font(lv_obj_get_child(back_button, 0), &lv_font_montserrat_24, 0);
     lv_obj_t *single_action_button = make_hardware_test_card(
         25, "1-KANAL-TEST",
-        "CH1 / GPIO48\n"
+        "CH1 / GPIO25\n"
         "1 kHz, 50 % Tastgrad\n"
         "Pegel: ungefähr 0 bis 3,3 V\n"
         "Tastkopf gegen Board-GND anschließen.\n"
-        "Nach dem Stoppen ist GPIO48 dauerhaft LOW.",
+        "Nach dem Stoppen ist GPIO25 dauerhaft LOW.",
         &single_test_status_label, &single_test_action_label, single_test_toggle_event);
     make_hardware_test_card(
         390, "2-KANAL-TEST",
-        "CH1 / GPIO48: 1 kHz, 50 % Tastgrad\n"
-        "CH2 / GPIO47: 1 kHz, 50 % Tastgrad\n"
+        "CH1 / GPIO25: 1 kHz, 50 % Tastgrad\n"
+        "CH2 / GPIO26: 1 kHz, 50 % Tastgrad\n"
         "Versatz CH1 zu CH2: 100 µs\n"
         "Beide Tastköpfe gegen denselben Board-GND anschließen.",
         &sync_test_status_label, &sync_test_action_label, sync_test_toggle_event);
@@ -1943,12 +1943,12 @@ void WaveHardwareReady(bool ready)
 void LedOn(lv_event_t *e)
 {
     (void)e;
-    log_operation_error("Starting GPIO48 output", gpio_wave_start());
+    log_operation_error("Starting GPIO25 output", gpio_wave_start());
 }
 void LedOff(lv_event_t *e)
 {
     (void)e;
-    log_operation_error("Stopping GPIO48 output", gpio_wave_stop());
+    log_operation_error("Stopping GPIO25 output", gpio_wave_stop());
 }
 void WaveFrequencyChanged(lv_event_t *e) { (void)e; }
 void WaveDutyChanged(lv_event_t *e) { (void)e; }
