@@ -101,6 +101,34 @@ Dual-channel lessons on GPIO25 and GPIO26:
 - Gated PWM
 - Quadrature encoder
 
+# Changes
+## Enhancements & ESP32-WROOM-32 Improvements
+
+This build includes several hardware compatibility fixes and usability extensions for standard **ESP32-WROOM-32** boards (such as ESP32 DevKit V1 and ESP32 D1 Mini):
+
+* **ESP32-WROOM-32 Signal Generation Compatibility:**
+  * Cleanly releases RMT TX channels and encoders (`rmt_del_channel` / `rmt_del_encoder`) when stopping sequences to prevent ESP-IDF 5.4+ GPIO 25 reservation conflicts when switching between RMT and LEDC/PWM lessons.
+  * Uses `64` RMT memory block symbols and conditionally guards `rmt_new_sync_manager` via `SOC_RMT_SUPPORT_TX_SYNCHRO` so all single- and dual-channel tests and lessons run reliably on the classic ESP32.
+* **Wi-Fi Client Mode (WPA2 / DHCP) with SoftAP Fallback:**
+  * On startup, HeadlessScopeBuddy attempts to connect to a configured 2.4 GHz WPA2 network using automatic channel scanning and DHCP.
+  * If no network is configured or the router is unreachable, it automatically falls back to its built-in access point (**`HeadlessScopeBuddy`**, password `scopebuddy`, reachable at `http://192.168.4` or `http://headlessscopebuddy.local`).
+  * Credentials can be configured or reset directly in the browser under **Settings (`⚙`) → Wi-Fi Connection** and are stored persistently in NVS.
+* **Real-World Application Examples:**
+  * Every lesson card on the start screen includes a toggleable real-world oscilloscope use case, which is also shown in the measurement setup panel during active tasks.
+* **Modular Multi-Language Web UI (`DE` / `EN`):**
+  * Switch live between **German (`DE`)** and **English (`EN`)** using the language selector in the top bar.
+  * Translations are stored in separate JSON files (`main/web/lang/de.json`, `main/web/lang/en.json`) embedded via `EMBED_TXTFILES`.
+
+### Adding Further Languages
+
+To add a new language (e.g., French `fr`) to the web UI:
+
+1. **Create the translation file:** Copy `main/web/lang/en.json` to `main/web/lang/fr.json` (saved as UTF-8 without BOM) and translate all values, `examples`, `cText`, and `cPatterns` entries.
+2. **Embed the file in CMake:** Add `"web/lang/fr.json"` to `EMBED_TXTFILES` in `main/CMakeLists.txt`.
+3. **Serve the file in `main/web_server.c`:** Declare the `_binary_fr_json_start` / `_binary_fr_json_end` symbols and return them in `lang_handler()` when `/lang/fr.json` is requested.
+4. **Register the language in `main/web/index.html`:** Add `'fr'` to `supportedLangs` and add `<option value="fr">FR</option>` inside `<select id="langSelect">`.
+5. **Rebuild and flash:** Run `idf.py build flash`.
+
 ## Build from source
 
 HeadlessScopeBuddy 0.6.0 is built with ESP-IDF 5.4.x. Install and activate
