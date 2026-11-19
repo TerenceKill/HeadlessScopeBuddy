@@ -101,8 +101,7 @@ Dual-channel lessons on GPIO25 and GPIO26:
 - Gated PWM
 - Quadrature encoder
 
-# Changes
-### v0.6.3
+# New in v0.6.3
 ## Enhancements & ESP32-WROOM-32 Improvements
 
 This build includes several hardware compatibility fixes and usability extensions for standard **ESP32-WROOM-32** boards (such as ESP32 DevKit V1 and ESP32 D1 Mini):
@@ -129,6 +128,22 @@ To add a new language (e.g., French `fr`) to the web UI:
 3. **Serve the file in `main/web_server.c`:** Declare the `_binary_fr_json_start` / `_binary_fr_json_end` symbols and return them in `lang_handler()` when `/lang/fr.json` is requested.
 4. **Register the language in `main/web/index.html`:** Add `'fr'` to `supportedLangs` and add `<option value="fr">FR</option>` inside `<select id="langSelect">`.
 5. **Rebuild and flash:** Run `idf.py build flash`.
+
+## New in v0.7.0
+
+Version **0.7.0** expands HeadlessScopeBuddy from 15 to **23 oscilloscope training lessons** by adding 8 new single- and dual-channel exercises:
+
+### New 1-Channel Lessons (CH1 / GPIO25)
+* **Glitch / Noise Spike (`STÖRIMPULS (GLITCH)`):** Detect periodic narrow needle pulses inside a regular square wave using pulse-width triggering (base period, glitch pulse width, noise interval).
+* **Manchester Code (`MANCHESTER-CODE`):** Decode self-clocking IEEE 802.3 mid-bit transitions into hex bytes (bit time, data rate, decoded byte).
+* **LED Protocol NZR (`LED-PROTOKOLL (NZR)`):** Measure 0-bit and 1-bit high pulse widths of a 1-wire addressable LED bus such as WS2812B / NeoPixel (0-bit high time, 1-bit high time, data byte).
+* **PWM Staircase Wave (`PWM-TREPPENWELLE`):** Analyze a 4-step modulated PWM ramp (20–80% duty cycle) used for analog voltage generation via RC low-pass filtering (carrier period, step duration, duty cycle span).
+
+### New 2-Channel Lessons (CH1 / GPIO25 & CH2 / GPIO26)
+* **SPI Bus Mode 0 (`SPI-BUS (MODE 0)`):** Measure `SCLK` clock frequency, `MOSI` setup time, and decode transmitted bytes on the rising clock edge.
+* **Stepper Motor (`SCHRITTMOTOR (STEP/DIR)`):** Verify `STEP` pulse frequency, step count per packet, and `DIR` direction setup lead time before the first step pulse.
+* **I2C Address Frame (`I2C-ADRESS-FRAME`):** Inspect START/STOP conditions, `SCL` clock frequency, 7-bit slave address, and R/W bit on `SCL` and `SDA`.
+* **Half-Bridge Dead-Time (`HALBBRÜCKEN-TOTZEIT`):** Measure switching frequency, high-side pulse width, and the complementary dead-time interlock between high-side and low-side gate signals.
 
 ## Build from source
 
