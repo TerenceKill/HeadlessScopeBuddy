@@ -15,7 +15,7 @@
 #include <string.h>
 
 #define GAME_TAG "SCOPEBUDDY_GAME"
-#define SCOPEBUDDY_FIRMWARE_VERSION "0.6.3"
+#define SCOPEBUDDY_FIRMWARE_VERSION "0.7.0"
 #define SETTINGS_NAMESPACE "scopebuddy"
 #define SETTINGS_KEY "ui_flags"
 #define SETTING_FLAG_TIMER       (1U << 0)
