@@ -89,7 +89,15 @@
     "FREQUENZTEILER": "Prüfung von Zähler- und Flip-Flop-ICs (z. B. 74HC4040 / CD4017) oder Prescalern auf sauberes Umschalten ohne Zählfehler.",
     "ULTRASCHALL-ECHO": "Fehlersuche an Ultraschall-Abstandssensoren (z. B. HC-SR04 in Robotik oder Einparkhilfen) über die Echo-Pulsbreite (58 µs/cm).",
     "FREIGEGEBENE PWM": "Diagnose an Motortreibern oder Schaltnetzteilen mit Enable-Pin, um die Anlaufverzögerung nach der Freigabe zu messen.",
-    "QUADRATURGEBER": "Wartung an CNC-Maschinen, 3D-Druckern oder Drehgebern – Prüfung von 90°-Phasenversatz und führender Spur für die Drehrichtung."
+    "QUADRATURGEBER": "Wartung an CNC-Maschinen, 3D-Druckern oder Drehgebern – Prüfung von 90°-Phasenversatz und führender Spur für die Drehrichtung.",
+    "STÖRIMPULS (GLITCH)": "Fehlersuche bei sporadischen EMV-Störungen, Spannungsspitzen oder Race-Conditions auf Steuerleitungen mithilfe des Pulsbreiten-Triggers.",
+    "MANCHESTER-CODE": "Analyse selbsttaktender Übertragungsprotokolle wie 125-kHz-RFID-Transponder, DCF77-Funkuhren oder DALI-Lichtsteuerungen.",
+    "LED-PROTOKOLL (NZR)": "Diagnose an adressierbaren RGB-LED-Streifen (z. B. WS2812B / NeoPixel), wenn Farben flackern oder das Bit-Timing knapp außerhalb der Toleranz liegt.",
+    "PWM-TREPPENWELLE": "Prüfung einer analogen Sollwert-Erzeugung per PWM und RC-Tiefpass (DAC-Ersatz) sowie Messung der Restwelligkeit.",
+    "SPI-BUS (MODE 0)": "Inbetriebnahme von SPI-Displays, SD-Karten oder Sensoren – Kontrolle von Taktfrequenz, Setup-Zeit und übertragenen Datenbytes.",
+    "SCHRITTMOTOR (STEP/DIR)": "Wartung an 3D-Druckern oder CNC-Fräsen (z. B. TMC2209 / A4988), wenn ein Motor Schritte verliert oder beim Richtungswechsel ruckelt.",
+    "I2C-ADRESS-FRAME": "Einer der häufigsten Messfälle in der Embedded-Entwicklung – Prüfung von Startbedingung, 7-Bit-Slave-Adresse und ACK/NACK bei I2C-Sensoren.",
+    "HALBBRÜCKEN-TOTZEIT": "Sicherheitskritische Messung in der Leistungselektronik (BLDC-Inverter, Synchron-Wandler), um Kurzschlüsse (Shoot-Through) der MOSFETs zu verhindern."
   },
   "cText": {},
   "cPatterns": []
