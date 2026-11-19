@@ -89,6 +89,50 @@ static const scope_lesson_definition_t lessons[SCOPEBUDDY_LESSON_COUNT] = {
       .connection_hint = "CH1 an GPIO25 (Spur A), CH2 an GPIO26 (Spur B), Masse an GND.",
       .trigger_hint = "Auf eine steigende Flanke von Spur A triggern.",
       .required_channels = 2 },
+    { .id = SCOPE_LESSON_GLITCH, .title = "STÖRIMPULS (GLITCH)", .category = "EREIGNISSE",
+      .summary = "Grundperiode, Glitch-Breite und Störintervall",
+      .learning_objective = "Kurze Nadelimpulse mittels Pulsbreiten-Trigger aufspüren.",
+      .connection_hint = CH1_CONNECTION, .trigger_hint = "Pulsbreiten-Trigger (< 20 µs) auf CH1 verwenden.",
+      .required_channels = 1 },
+    { .id = SCOPE_LESSON_MANCHESTER, .title = "MANCHESTER-CODE", .category = "KOMMUNIKATION",
+      .summary = "Bitzeit, Datenrate und dekodiertes Byte",
+      .learning_objective = "Flankenwechsel in der Bitmitte als Datenbits auswerten.",
+      .connection_hint = CH1_CONNECTION, .trigger_hint = "Auf die erste Flanke nach der Idle-Pause triggern.",
+      .required_channels = 1 },
+    { .id = SCOPE_LESSON_NEOPIXEL, .title = "LED-PROTOKOLL (NZR)", .category = "KOMMUNIKATION",
+      .summary = "0-Bit-Zeit, 1-Bit-Zeit und Farb-Byte",
+      .learning_objective = "Pulsbreiten-codierte Bits eines 1-Draht-LED-Busses messen.",
+      .connection_hint = CH1_CONNECTION, .trigger_hint = "Auf steigende Flanke nach der Reset-Pause triggern.",
+      .required_channels = 1 },
+    { .id = SCOPE_LESSON_PWM_DAC, .title = "PWM-TREPPENWELLE", .category = "STEUERSIGNALE",
+      .summary = "Trägerperiode, Stufenzeit und Tastgrad-Hub",
+      .learning_objective = "Modulierten Tastgrad einer PWM-Stufenfolge ausmessen.",
+      .connection_hint = CH1_CONNECTION, .trigger_hint = "Auf den Beginn der schmalsten Pulsstufe triggern.",
+      .required_channels = 1 },
+    { .id = SCOPE_LESSON_SPI, .title = "SPI-BUS (MODE 0)", .category = "KOMMUNIKATION",
+      .summary = "Taktfrequenz, Setup-Zeit und Datenbyte",
+      .learning_objective = "MOSI-Datenbits an der steigenden SCLK-Flanke ablesen.",
+      .connection_hint = "CH1 an GPIO25 (SCLK), CH2 an GPIO26 (MOSI), Masse an GND.",
+      .trigger_hint = "Single-Shot auf die erste steigende Taktflanke von CH1.",
+      .required_channels = 2 },
+    { .id = SCOPE_LESSON_STEPPER, .title = "SCHRITTMOTOR (STEP/DIR)", .category = "STEUERSIGNALE",
+      .summary = "Schrittfrequenz, Schrittzahl und DIR-Vorlauf",
+      .learning_objective = "Schrittimpulse und Richtungswechsel zeitlich prüfen.",
+      .connection_hint = "CH1 an GPIO25 (STEP), CH2 an GPIO26 (DIR), Masse an GND.",
+      .trigger_hint = "Auf die steigende DIR-Flanke von CH2 triggern.",
+      .required_channels = 2 },
+    { .id = SCOPE_LESSON_I2C, .title = "I2C-ADRESS-FRAME", .category = "KOMMUNIKATION",
+      .summary = "SCL-Frequenz, 7-Bit-Adresse und R/W-Bit",
+      .learning_objective = "Startbedingung und 7-Bit-Slave-Adresse auf SCL/SDA dekodieren.",
+      .connection_hint = "CH1 an GPIO25 (SCL), CH2 an GPIO26 (SDA), Masse an GND.",
+      .trigger_hint = "Auf fallende SDA-Flanke (CH2) bei HIGH-Pegel auf CH1 triggern.",
+      .required_channels = 2 },
+    { .id = SCOPE_LESSON_DEADTIME, .title = "HALBBRÜCKEN-TOTZEIT", .category = "LEISTUNGSELEKTRONIK",
+      .summary = "Schaltfrequenz, Pulsbreite und Totzeit",
+      .learning_objective = "Verriegelungspause (Dead-Time) zwischen High- und Low-Side messen.",
+      .connection_hint = "CH1 an GPIO25 (High-Side), CH2 an GPIO26 (Low-Side), Masse an GND.",
+      .trigger_hint = "Auf die fallende Flanke von CH1 triggern und Flankenwechsel zoomen.",
+      .required_channels = 2 },
 };
 
 static uint32_t random_range(uint32_t minimum, uint32_t maximum)
@@ -698,6 +742,318 @@ static uint32_t signature_mix(uint32_t hash, uint32_t value)
     hash ^= value;
     return hash * 16777619U;
 }
+static esp_err_t generate_glitch(scope_lesson_instance_t *instance)
+{
+    uint32_t period = instance->difficulty == 1 ? 1000U : 500U;
+    uint32_t half = period / 2U;
+    uint32_t glitch_us = instance->difficulty == 1 ? 15U : (instance->difficulty == 2 ? 8U : 4U);
+    uint32_t cycles = instance->difficulty == 1 ? 4U : 6U;
+
+    instance->signal.kind = SCOPE_SIGNAL_SEQUENCE;
+    instance->signal.data.sequence.loop = true;
+
+    for (uint32_t c = 0; c < cycles; ++c) {
+        ESP_RETURN_ON_ERROR(append_segment(instance, true, half), "LESSONS", "Glitch HIGH failed");
+        if (c == 1U) {
+            uint32_t pre = half / 2U;
+            ESP_RETURN_ON_ERROR(append_segment(instance, false, pre), "LESSONS", "Glitch pre failed");
+            ESP_RETURN_ON_ERROR(append_segment(instance, true, glitch_us), "LESSONS", "Glitch spike failed");
+            ESP_RETURN_ON_ERROR(append_segment(instance, false, half - pre - glitch_us), "LESSONS", "Glitch post failed");
+        } else {
+            ESP_RETURN_ON_ERROR(append_segment(instance, false, half), "LESSONS", "Glitch LOW failed");
+        }
+    }
+
+    uint32_t interval_us = cycles * period;
+    instance->parameters.glitch.glitch_us = glitch_us;
+    instance->parameters.glitch.interval_us = interval_us;
+    snprintf(instance->context, sizeof(instance->context),
+             "Im regulären Rechtecksignal tritt periodisch ein kurzer positiver Nadelimpuls auf.");
+    set_numeric_measurement(instance, 0, "Grundperiode", SCOPE_MEASUREMENT_CHANNEL_1,
+                            period, period * 0.02, "µs", 0, "Abstand regulärer steigender Flanken");
+    set_numeric_measurement(instance, 1, "Glitch-Pulsbreite", SCOPE_MEASUREMENT_CHANNEL_1,
+                            glitch_us, 2.0, "µs", 0, "Breite des kurzen Störimpulses");
+    set_numeric_measurement(instance, 2, "Störintervall", SCOPE_MEASUREMENT_CHANNEL_1,
+                            interval_us / 1000.0, (interval_us / 1000.0) * 0.03,
+                            "ms", 2, "Abstand zwischen zwei Glitches");
+    return ESP_OK;
+}
+
+static esp_err_t generate_manchester(scope_lesson_instance_t *instance)
+{
+    static const uint32_t bit_times[] = { 400, 200, 100 };
+    static const uint8_t bytes[] = { 0xA5, 0x5A, 0x3C, 0xC3, 0x96 };
+    uint32_t bit_us = bit_times[instance->difficulty - 1U];
+    uint32_t half_bit = bit_us / 2U;
+    uint8_t data = bytes[esp_random() % sizeof(bytes)];
+
+    instance->signal.kind = SCOPE_SIGNAL_SEQUENCE;
+    instance->signal.data.sequence.loop = true;
+    ESP_RETURN_ON_ERROR(append_segment(instance, false, bit_us * 4U), "LESSONS", "Manchester idle failed");
+
+    /* IEEE 802.3: 1 = fallend in Bitmitte (HIGH->LOW), 0 = steigend in Bitmitte (LOW->HIGH), MSB zuerst */
+    for (int bit = 7; bit >= 0; --bit) {
+        bool one = ((data >> bit) & 1U) != 0;
+        ESP_RETURN_ON_ERROR(append_segment(instance, one, half_bit), "LESSONS", "Manchester first half failed");
+        ESP_RETURN_ON_ERROR(append_segment(instance, !one, half_bit), "LESSONS", "Manchester second half failed");
+    }
+    ESP_RETURN_ON_ERROR(append_segment(instance, false, bit_us * 4U), "LESSONS", "Manchester post-idle failed");
+
+    uint32_t baud = 1000000U / bit_us;
+    instance->parameters.manchester.bit_us = bit_us;
+    instance->parameters.manchester.data_byte = data;
+    snprintf(instance->context, sizeof(instance->context),
+             "Manchester (IEEE 802.3, MSB zuerst): 1 = fallende Flanke, 0 = steigende Flanke in Bitmitte.");
+    set_numeric_measurement(instance, 0, "Bitzeit", SCOPE_MEASUREMENT_CHANNEL_1,
+                            bit_us, bit_us * 0.03, "µs", 0, "Dauer eines kompletten Bits");
+    set_numeric_measurement(instance, 1, "Datenrate", SCOPE_MEASUREMENT_DERIVED,
+                            baud, baud * 0.03, "Bd", 0, "Datenrate = 1 / tBit");
+    char byte_text[8];
+    snprintf(byte_text, sizeof(byte_text), "0x%02X", data);
+    set_text_measurement(instance, 2, "Datenbyte", SCOPE_MEASUREMENT_DERIVED,
+                         byte_text, "8 Bits MSB zuerst aus Flankenrichtung in Bitmitte");
+    return ESP_OK;
+}
+
+static esp_err_t generate_neopixel(scope_lesson_instance_t *instance)
+{
+    static const uint8_t bytes[] = { 0xB4, 0x69, 0xD2, 0x4E, 0x9A };
+    uint32_t bit_period = instance->difficulty == 1 ? 20U : 10U;
+    uint32_t t0h = bit_period / 4U;         /* 5 µs bzw. 2.5 µs -> gerundet */
+    if (t0h < 2U) t0h = 2U;
+    uint32_t t1h = (bit_period * 3U) / 5U;  /* 12 µs bzw. 6 µs */
+    uint8_t data = bytes[esp_random() % sizeof(bytes)];
+
+    instance->signal.kind = SCOPE_SIGNAL_SEQUENCE;
+    instance->signal.data.sequence.loop = true;
+    ESP_RETURN_ON_ERROR(append_segment(instance, false, 120U), "LESSONS", "NZR reset failed");
+
+    for (int bit = 7; bit >= 0; --bit) {
+        bool one = ((data >> bit) & 1U) != 0;
+        uint32_t high_us = one ? t1h : t0h;
+        ESP_RETURN_ON_ERROR(append_segment(instance, true, high_us), "LESSONS", "NZR HIGH failed");
+        ESP_RETURN_ON_ERROR(append_segment(instance, false, bit_period - high_us), "LESSONS", "NZR LOW failed");
+    }
+    ESP_RETURN_ON_ERROR(append_segment(instance, false, 120U), "LESSONS", "NZR post-reset failed");
+
+    instance->parameters.neopixel.t0h_us = t0h;
+    instance->parameters.neopixel.t1h_us = t1h;
+    instance->parameters.neopixel.data_byte = data;
+    snprintf(instance->context, sizeof(instance->context),
+             "1-Draht-LED-Protokoll (MSB zuerst): Kurzer HIGH-Puls = 0, langer HIGH-Puls = 1.");
+    set_numeric_measurement(instance, 0, "0-Bit High-Zeit", SCOPE_MEASUREMENT_CHANNEL_1,
+                            t0h, 1.0, "µs", 0, "Breite eines kurzen HIGH-Pulses");
+    set_numeric_measurement(instance, 1, "1-Bit High-Zeit", SCOPE_MEASUREMENT_CHANNEL_1,
+                            t1h, 1.0, "µs", 0, "Breite eines langen HIGH-Pulses");
+    char byte_text[8];
+    snprintf(byte_text, sizeof(byte_text), "0x%02X", data);
+    set_text_measurement(instance, 2, "Datenbyte", SCOPE_MEASUREMENT_DERIVED,
+                         byte_text, "8 Bits MSB zuerst anhand der Pulsbreite");
+    return ESP_OK;
+}
+
+static esp_err_t generate_pwm_dac(scope_lesson_instance_t *instance)
+{
+    uint32_t period = 100U; /* 10 kHz Träger */
+    uint32_t steps = 4U;
+    uint32_t pulses_per_step = instance->difficulty == 1 ? 4U : 3U;
+    static const uint8_t duties[4] = { 20, 40, 60, 80 };
+
+    instance->signal.kind = SCOPE_SIGNAL_SEQUENCE;
+    instance->signal.data.sequence.loop = true;
+
+    for (uint32_t s = 0; s < steps; ++s) {
+        uint32_t high_us = (period * duties[s]) / 100U;
+        for (uint32_t p = 0; p < pulses_per_step; ++p) {
+            ESP_RETURN_ON_ERROR(append_segment(instance, true, high_us), "LESSONS", "PWM DAC HIGH failed");
+            ESP_RETURN_ON_ERROR(append_segment(instance, false, period - high_us), "LESSONS", "PWM DAC LOW failed");
+        }
+    }
+
+    uint32_t step_us = pulses_per_step * period;
+    instance->parameters.pwm_dac.carrier_hz = 10000U;
+    instance->parameters.pwm_dac.step_count = steps;
+    snprintf(instance->context, sizeof(instance->context),
+             "4-stufige PWM-Rampe (20–80 %% Tastgrad) zur Erzeugung einer analogen Treppenspannung.");
+    set_numeric_measurement(instance, 0, "Trägerperiode", SCOPE_MEASUREMENT_CHANNEL_1,
+                            period, 3.0, "µs", 0, "Periodendauer eines einzelnen PWM-Pulses");
+    set_numeric_measurement(instance, 1, "Stufendauer", SCOPE_MEASUREMENT_CHANNEL_1,
+                            step_us, step_us * 0.04, "µs", 0, "Dauer einer Tastgrad-Stufe");
+    set_numeric_measurement(instance, 2, "Tastgrad-Hub", SCOPE_MEASUREMENT_DERIVED,
+                            60, 3.0, "%", 0, "Dmax - Dmin (80 % - 20 %)");
+    return ESP_OK;
+}
+static esp_err_t generate_spi(scope_lesson_instance_t *instance)
+{
+    static const uint32_t bit_periods[] = { 100, 50, 20 }; /* 10 kHz, 20 kHz, 50 kHz */
+    static const uint8_t bytes[] = { 0x53, 0xA6, 0xC9, 0x3A, 0x71 };
+    uint32_t period = bit_periods[instance->difficulty - 1U];
+    uint32_t half = period / 2U;
+    uint32_t idle = period * 4U;
+    uint8_t data = bytes[esp_random() % sizeof(bytes)];
+
+    begin_pair(instance);
+
+    /* CH1: SCLK (CPOL=0, CPHA=0 -> Abtastung an steigender Flanke) */
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, false, idle), "LESSONS", "SPI SCLK pre failed");
+    for (int bit = 7; bit >= 0; --bit) {
+        ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, false, half), "LESSONS", "SPI SCLK LOW failed");
+        ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, true, half), "LESSONS", "SPI SCLK HIGH failed");
+    }
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, false, idle), "LESSONS", "SPI SCLK post failed");
+
+    /* CH2: MOSI (MSB zuerst, Datenwechsel an fallender Flanke -> Setup-Zeit = half) */
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, false, idle), "LESSONS", "SPI MOSI pre failed");
+    for (int bit = 7; bit >= 0; --bit) {
+        bool level = ((data >> bit) & 1U) != 0;
+        ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, level, period), "LESSONS", "SPI MOSI bit failed");
+    }
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, false, idle), "LESSONS", "SPI MOSI post failed");
+
+    uint32_t clock_hz = 1000000U / period;
+    instance->parameters.spi.clock_hz = clock_hz;
+    instance->parameters.spi.data_byte = data;
+    snprintf(instance->context, sizeof(instance->context),
+             "SPI Mode 0 (CPOL=0, CPHA=0, MSB zuerst): CH1 = SCLK, CH2 = MOSI. Abtastung bei steigender Flanke.");
+    set_numeric_measurement(instance, 0, "SCLK-Frequenz", SCOPE_MEASUREMENT_CHANNEL_1,
+                            clock_hz, clock_hz * 0.03, "Hz", 0, "fSCLK = 1 / TSCLK");
+    set_numeric_measurement(instance, 1, "Setup-Zeit", SCOPE_MEASUREMENT_CHANNEL_PAIR,
+                            half, half * 0.05, "µs", 0, "Datenwechsel MOSI bis steigende SCLK-Flanke");
+    char byte_text[8];
+    snprintf(byte_text, sizeof(byte_text), "0x%02X", data);
+    set_text_measurement(instance, 2, "Datenbyte (MOSI)", SCOPE_MEASUREMENT_DERIVED,
+                         byte_text, "8 Bits MSB zuerst an steigender SCLK-Flanke");
+    return ESP_OK;
+}
+
+static esp_err_t generate_stepper(scope_lesson_instance_t *instance)
+{
+    uint32_t step_period = instance->difficulty == 1 ? 400U : (instance->difficulty == 2 ? 200U : 100U);
+    uint32_t step_high = step_period / 2U;
+    uint32_t step_count = instance->difficulty == 1 ? 5U : random_range(6, 10);
+    uint32_t dir_setup = instance->difficulty == 1 ? 200U : (instance->difficulty == 2 ? 100U : 40U);
+    uint32_t pre_idle = 1000U;
+    uint32_t post_idle = 1000U;
+    uint32_t active_duration = dir_setup + step_count * step_period + post_idle;
+
+    begin_pair(instance);
+
+    /* CH1: STEP-Impulse */
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, false, pre_idle + dir_setup), "LESSONS", "Stepper STEP pre failed");
+    for (uint32_t s = 0; s < step_count; ++s) {
+        ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, true, step_high), "LESSONS", "Stepper STEP HIGH failed");
+        ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, false, step_period - step_high), "LESSONS", "Stepper STEP LOW failed");
+    }
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, false, post_idle), "LESSONS", "Stepper STEP post failed");
+
+    /* CH2: DIR-Richtungssignal */
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, false, pre_idle), "LESSONS", "Stepper DIR LOW failed");
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, true, active_duration), "LESSONS", "Stepper DIR HIGH failed");
+
+    uint32_t step_hz = 1000000U / step_period;
+    instance->parameters.stepper.step_count = step_count;
+    instance->parameters.stepper.dir_setup_us = dir_setup;
+    snprintf(instance->context, sizeof(instance->context),
+             "Schrittmotor-Treiber: CH2 (DIR) wechselt vor dem STEP-Paket auf CH1 auf HIGH.");
+    set_numeric_measurement(instance, 0, "Schrittfrequenz", SCOPE_MEASUREMENT_CHANNEL_1,
+                            step_hz, step_hz * 0.03, "Hz", 0, "fSTEP = 1 / TSTEP");
+    set_numeric_measurement(instance, 1, "Schritte pro Paket", SCOPE_MEASUREMENT_CHANNEL_1,
+                            step_count, 0, "", 0, "HIGH-Pulse auf CH1 zählen");
+    set_numeric_measurement(instance, 2, "DIR-Vorlaufzeit", SCOPE_MEASUREMENT_CHANNEL_PAIR,
+                            dir_setup, dir_setup * 0.05, "µs", 0, "DIR-Anstieg bis erster STEP-Anstieg");
+    return ESP_OK;
+}
+
+static esp_err_t generate_i2c(scope_lesson_instance_t *instance)
+{
+    static const uint32_t bit_periods[] = { 100, 40, 20 }; /* 10 kHz, 25 kHz, 50 kHz */
+    static const uint8_t addresses[] = { 0x3C, 0x48, 0x68, 0x76, 0x50 };
+    uint32_t period = bit_periods[instance->difficulty - 1U];
+    uint32_t q = period / 4U;
+    uint8_t addr = addresses[esp_random() % sizeof(addresses)];
+    bool is_read = (esp_random() & 1U) != 0;
+    uint8_t addr_rw = (uint8_t)((addr << 1U) | (is_read ? 1U : 0U));
+
+    begin_pair(instance);
+
+    /* Idle: SCL=1, SDA=1 */
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, true, period * 2U), "LESSONS", "I2C SCL idle failed");
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, true, period * 2U), "LESSONS", "I2C SDA idle failed");
+
+    /* START-Bedingung: SDA fällt während SCL HIGH ist */
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, true, q * 2U), "LESSONS", "I2C SCL start failed");
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, true, q), "LESSONS", "I2C SDA start pre failed");
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, false, q), "LESSONS", "I2C SDA start fall failed");
+
+    /* 8 Bits (7-Bit-Adresse MSB zuerst + R/W-Bit) */
+    for (int bit = 7; bit >= 0; --bit) {
+        bool sda_val = ((addr_rw >> bit) & 1U) != 0;
+        ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, false, q * 2U), "LESSONS", "I2C SCL LOW failed");
+        ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, true, q * 2U), "LESSONS", "I2C SCL HIGH failed");
+
+        ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, false, q), "LESSONS", "I2C SDA hold failed");
+        ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, sda_val, q * 3U), "LESSONS", "I2C SDA bit failed");
+    }
+
+    /* 9. Takt: ACK (SDA = LOW) */
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, false, q * 2U), "LESSONS", "I2C ACK SCL LOW failed");
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, true, q * 2U), "LESSONS", "I2C ACK SCL HIGH failed");
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, false, q * 4U), "LESSONS", "I2C ACK SDA LOW failed");
+
+    /* STOP-Bedingung: SDA steigt während SCL HIGH ist */
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, false, q * 2U), "LESSONS", "I2C STOP SCL LOW failed");
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, true, period * 2U), "LESSONS", "I2C STOP SCL HIGH failed");
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, false, q * 3U), "LESSONS", "I2C STOP SDA pre failed");
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, true, q + period * 2U - q * 2U), "LESSONS", "I2C STOP SDA rise failed");
+
+    uint32_t scl_hz = 1000000U / period;
+    instance->parameters.i2c.clock_hz = scl_hz;
+    instance->parameters.i2c.address_7bit = addr;
+    instance->parameters.i2c.is_read = is_read;
+    snprintf(instance->context, sizeof(instance->context),
+             "I2C-Adress-Frame (CH1 = SCL, CH2 = SDA): START, 7-Bit-Adresse + R/W-Bit, ACK (LOW), STOP.");
+    set_numeric_measurement(instance, 0, "SCL-Taktfrequenz", SCOPE_MEASUREMENT_CHANNEL_1,
+                            scl_hz, scl_hz * 0.03, "Hz", 0, "fSCL = 1 / TSCL");
+    char addr_text[8];
+    snprintf(addr_text, sizeof(addr_text), "0x%02X", addr);
+    set_text_measurement(instance, 1, "7-Bit-Adresse", SCOPE_MEASUREMENT_DERIVED,
+                         addr_text, "Erste 7 Datenbits nach START (MSB zuerst)");
+    set_text_measurement(instance, 2, "R/W-Bit (8. Bit)", SCOPE_MEASUREMENT_CHANNEL_2,
+                         is_read ? "1 (Read)" : "0 (Write)", "8. Takt vor dem ACK-Bit");
+    return ESP_OK;
+}
+
+static esp_err_t generate_deadtime(scope_lesson_instance_t *instance)
+{
+    uint32_t period = instance->difficulty == 1 ? 400U : 200U; /* 2,5 kHz bzw. 5 kHz */
+    uint32_t deadtime = instance->difficulty == 1 ? 20U : (instance->difficulty == 2 ? 10U : 5U);
+    uint32_t hs_high = (period / 2U) - deadtime;
+    uint32_t ls_high = period - hs_high - (2U * deadtime);
+
+    begin_pair(instance);
+
+    /* CH1: High-Side Gate */
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, true, hs_high), "LESSONS", "Deadtime HS HIGH failed");
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 0, false, period - hs_high), "LESSONS", "Deadtime HS LOW failed");
+
+    /* CH2: Low-Side Gate (mit Totzeit vor und nach dem Einschalten) */
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, false, hs_high + deadtime), "LESSONS", "Deadtime LS pre failed");
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, true, ls_high), "LESSONS", "Deadtime LS HIGH failed");
+    ESP_RETURN_ON_ERROR(append_pair_segment(instance, 1, false, deadtime), "LESSONS", "Deadtime LS post failed");
+
+    uint32_t freq_hz = 1000000U / period;
+    instance->parameters.deadtime.frequency_hz = freq_hz;
+    instance->parameters.deadtime.deadtime_us = deadtime;
+    snprintf(instance->context, sizeof(instance->context),
+             "Komplementäre Halbbrücken-Ansteuerung (CH1 = High-Side, CH2 = Low-Side) mit Verriegelungspause.");
+    set_numeric_measurement(instance, 0, "Schaltfrequenz", SCOPE_MEASUREMENT_CHANNEL_1,
+                            freq_hz, freq_hz * 0.02, "Hz", 0, "f = 1 / T");
+    set_numeric_measurement(instance, 1, "High-Side Pulsbreite", SCOPE_MEASUREMENT_CHANNEL_1,
+                            hs_high, hs_high * 0.03, "µs", 0, "Einschaltdauer CH1");
+    set_numeric_measurement(instance, 2, "Totzeit (Dead-Time)", SCOPE_MEASUREMENT_CHANNEL_PAIR,
+                            deadtime, 2.0, "µs", 0, "CH1-Abfall bis CH2-Anstieg (beide LOW)");
+    return ESP_OK;
+}
 
 static uint32_t calculate_signature(const scope_lesson_instance_t *instance)
 {
@@ -771,6 +1127,14 @@ esp_err_t scopebuddy_generate_lesson(scope_lesson_id_t id, uint8_t difficulty,
     case SCOPE_LESSON_ULTRASONIC: err = generate_ultrasonic(instance); break;
     case SCOPE_LESSON_GATED_PWM: err = generate_gated_pwm(instance); break;
     case SCOPE_LESSON_QUADRATURE: err = generate_quadrature(instance); break;
+    case SCOPE_LESSON_GLITCH: err = generate_glitch(instance); break;
+    case SCOPE_LESSON_MANCHESTER: err = generate_manchester(instance); break;
+    case SCOPE_LESSON_NEOPIXEL: err = generate_neopixel(instance); break;
+    case SCOPE_LESSON_PWM_DAC: err = generate_pwm_dac(instance); break;
+    case SCOPE_LESSON_SPI: err = generate_spi(instance); break;
+    case SCOPE_LESSON_STEPPER: err = generate_stepper(instance); break;
+    case SCOPE_LESSON_I2C: err = generate_i2c(instance); break;
+    case SCOPE_LESSON_DEADTIME: err = generate_deadtime(instance); break;
     default: err = ESP_ERR_INVALID_ARG; break;
     }
     if (err == ESP_OK) instance->signature = calculate_signature(instance);
