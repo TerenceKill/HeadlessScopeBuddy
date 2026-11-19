@@ -16,6 +16,18 @@ extern const uint8_t lang_de_start[] asm("_binary_de_json_start");
 extern const uint8_t lang_de_end[]   asm("_binary_de_json_end");
 extern const uint8_t lang_en_start[] asm("_binary_en_json_start");
 extern const uint8_t lang_en_end[]   asm("_binary_en_json_end");
+extern const uint8_t favicon_svg_start[] asm("_binary_favicon_svg_start");
+extern const uint8_t favicon_svg_end[]   asm("_binary_favicon_svg_end");
+
+static esp_err_t favicon_handler(httpd_req_t *req)
+{
+    size_t len = favicon_svg_end - favicon_svg_start;
+    while (len > 0 && favicon_svg_start[len - 1] == '\0') {
+        len--;
+    }
+    httpd_resp_set_type(req, "image/svg+xml");
+    return httpd_resp_send(req, (const char *)favicon_svg_start, len);
+}
 
 /* Funktionen aus main.c zum Lesen/Speichern der WLAN-Daten im NVS */
 extern esp_err_t wifi_save_credentials_and_restart(const char *ssid, const char *password);
@@ -254,6 +266,9 @@ static const httpd_uri_t routes[] = {
     { .uri = "/api/wifi", .method = HTTP_GET, .handler = wifi_get_handler },
     { .uri = "/api/wifi", .method = HTTP_POST, .handler = wifi_post_handler },
 	{ .uri = "/lang/*", .method = HTTP_GET, .handler = lang_handler },
+	{ .uri = "/favicon.svg", .method = HTTP_GET, .handler = favicon_handler },
+    { .uri = "/favicon.ico", .method = HTTP_GET, .handler = favicon_handler },
+
 };
 
 esp_err_t web_server_start(void)
